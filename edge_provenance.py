@@ -15,11 +15,19 @@ relationship points, because "we depend on X" and "X is a customer" produce oppo
 Direction is decided by the filer's wording, never guessed: a chunk that names a company without
 using a relationship verb is reported as ambiguous and left unapplied.
 
-What this measured on the graph as it stands: 4 of 32 uncited edges could be attributed from annual
-reports, and adding 8-Ks changed nothing, because the missing sentences genuinely do not exist. ASML's
+Two measurements, taken on the graph as it stands.
+
+Citing edges it already carried: 4 of 32 uncited edges could be attributed from annual reports, and
+adding 8-Ks changed nothing, because the missing sentences genuinely do not exist. ASML's
 538,579-character 20-F contains the string "TSMC" zero times and TSMC's 20-F never says "ASML" - the
 two companies whose relationship defines the AI supply chain each write "our largest customer" rather
-than a name. An edge this script cannot cite is an analyst's inference, and the graph says so.
+than a name.
+
+Proposing edges it did not: 39 filers read end to end stated 28 relationships, of which 23 became
+cited edges (15 partnerships, 8 supply), 4 were already in the graph and 1 scored too low to trust.
+Of the 15 chart companies the graph had never read, exactly two - Astera Labs and STMicroelectronics
+- said anything about another member of it. An edge this script cannot cite is an analyst's
+inference, and the graph says so.
 """
 
 import argparse

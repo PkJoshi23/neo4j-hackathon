@@ -131,6 +131,9 @@ TICKER_LAYERS = {
     "MU": "memory", "000660.KS": "memory", "SKHY": "memory", "WDC": "memory", "STX": "memory",
     "LITE": "photonics", "COHR": "photonics", "AAOI": "photonics", "POET": "photonics",
     "MTSI": "photonics", "LASR": "photonics", "CRDO": "photonics", "ALAB": "photonics",
+    # The chart lists ST under Lasers, and its VCSEL / silicon-photonics line is why it belongs to
+    # this graph at all, even though most of its revenue is general-purpose silicon.
+    "STM": "photonics",
     "NVDA": "silicon", "AMD": "silicon", "AVGO": "silicon", "MRVL": "silicon",
     "ANET": "silicon", "QCOM": "silicon",
     "TER": "test", "AEHR": "test", "COHU": "test",
