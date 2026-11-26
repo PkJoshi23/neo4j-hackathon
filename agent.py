@@ -19,6 +19,8 @@ import re
 import time
 from typing import Any, Dict, List, Optional
 
+from relate_adapter import embed_query
+
 logger = logging.getLogger(__name__)
 
 READ_ONLY_FORBIDDEN = re.compile(
@@ -233,7 +235,7 @@ class SupplyChainAgent:
         query_embedding = None
         if self.embedder is not None:
             try:
-                query_embedding = list(self.embedder.encode(query).tolist())
+                query_embedding = embed_query(self.embedder, query)
             except Exception as exc:
                 logger.warning("Could not embed the search query: %s", exc)
         hits = self.graph.hybrid_search_chunks(query, query_embedding, top_k=k)

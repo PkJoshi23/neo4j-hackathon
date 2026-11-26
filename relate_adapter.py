@@ -38,6 +38,16 @@ DEFAULT_CHUNKS_PATH = os.path.join(os.path.dirname(__file__), "supply_chain_chun
 # built for exactly this width, so a chunk with any other dimensionality cannot be indexed
 # and is skipped with a warning rather than silently corrupting search.
 CHUNK_EMBEDDING_DIM = 384
+
+# bge-small-en-v1.5 was trained asymmetrically: a passage goes in bare, a question goes in behind
+# this instruction. The corpus is already embedded bare, so a query without the prefix is compared
+# against passages in a vector space the checkpoint never intended for that pairing.
+QUERY_INSTRUCTION = "Represent this sentence for searching relevant passages: "
+
+
+def embed_query(embedder, text: str) -> List[float]:
+    """Embed a retrieval query the way the checkpoint was trained to be asked."""
+    return list(embedder.encode(QUERY_INSTRUCTION + str(text)).tolist())
 # Reciprocal Rank Fusion constant: dampens the gap between rank 1 and rank 2 so a chunk
 # that both indexes like has more pull than one that tops a single list.
 RRF_K = 60
@@ -405,7 +415,7 @@ class RelateSupplyChainGraph:
         self._rows(
             "MERGE (n:Company {id: $id}) "
             "SET n.label = $label, n.type = $type, n.tier = $tier, n.tier_name = $tier_name, "
-            "n.full_name = $full_name, n.description = $description",
+            "n.full_name = $full_name, n.description = $description, n.layer = $layer",
             {
                 "id": node_id,
                 "label": properties["label"],
@@ -414,6 +424,9 @@ class RelateSupplyChainGraph:
                 "tier_name": properties["tier_name"],
                 "full_name": props.get("full_name"),
                 "description": props.get("description"),
+                # An unmapped ticker is written as NULL, which reads as "not in any layer" rather
+                # than being quietly filtered out of a layer question later.
+                "layer": properties.get("layer"),
             },
         )
         self._refresh_cache()
@@ -464,7 +477,8 @@ class RelateSupplyChainGraph:
         """Records an ingested filing as a graph node linked to its company."""
         self._rows(
             "MERGE (c:Company {id: $ticker}) "
-            "ON CREATE SET c.label = $ticker, c.type = 'Company', c.tier = $tier, c.tier_name = $tier_name "
+            "ON CREATE SET c.label = $ticker, c.type = 'Company', c.tier = $tier, "
+            "c.tier_name = $tier_name, c.layer = $layer "
             "MERGE (f:Filing {id: $id}) "
             "SET f.ticker = $ticker, f.accession_no = $accession, f.form = $form, f.filing_date = $date "
             "MERGE (c)-[:FILED]->(f)",
@@ -476,6 +490,7 @@ class RelateSupplyChainGraph:
                 "date": filing_date,
                 "tier": infer_tier(ticker),
                 "tier_name": TIER_DEFINITIONS.get(infer_tier(ticker), {}).get("name", ""),
+                "layer": infer_layer(ticker),
             },
         )
 
@@ -838,7 +853,8 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
             tier = info.get("tier")
             self._rows(
                 "MERGE (n:Company {id: $id}) SET n.label = $label, n.type = $type, n.tier = $tier, "
-                "n.tier_name = $tier_name, n.full_name = $full_name, n.description = $description",
+                "n.tier_name = $tier_name, n.full_name = $full_name, n.description = $description, "
+                "n.layer = $layer",
                 {
                     "id": node_id,
                     "label": info.get("label") or node_id,
@@ -848,6 +864,7 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
                     or TIER_DEFINITIONS.get(tier if tier is not None else DEFAULT_TIER, {}).get("name", ""),
                     "full_name": info.get("full_name"),
                     "description": info.get("description"),
+                    "layer": info.get("layer") or infer_layer(node_id),
                 },
             )
             imported_nodes += 1

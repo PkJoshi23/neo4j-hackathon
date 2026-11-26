@@ -48,7 +48,7 @@ except ImportError:
     HAS_OPENAI = False
 
 # Relate Graph Engine
-from relate_adapter import RelateSupplyChainGraph, TIER_DEFINITIONS
+from relate_adapter import RelateSupplyChainGraph, TIER_DEFINITIONS, embed_query
 
 load_dotenv()
 
@@ -1008,7 +1008,7 @@ def _render_graphrag_chat(relate_graph, embedder, llm):
                 q_embedding = []
                 if embedder is not None:
                     try:
-                        q_embedding = embedder.encode(active_prompt).tolist()
+                        q_embedding = embed_query(embedder, active_prompt)
                     except Exception:
                         q_embedding = []
 
