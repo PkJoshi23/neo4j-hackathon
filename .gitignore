@@ -1,0 +1,27 @@
+# Secrets
+.env
+.streamlit/secrets.toml
+
+# Local caches (huge: SEC filing downloads, ~744 MB)
+.edgar_data/
+__pycache__/
+*.py[cod]
+
+# Relate runtime artifacts (commit supply_chain.rl, never its WAL)
+*.rl.wal
+*.rl.lock
+.rl_wal/
+
+# Editors / OS
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# Python packaging
+build/
+dist/
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/

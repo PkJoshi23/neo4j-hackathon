@@ -1,0 +1,2200 @@
+{
+  "nodes": {
+    "ASML": {
+      "id": "ASML",
+      "label": "ASML",
+      "type": "Company",
+      "tier": 0,
+      "tier_name": "Tier 0: Equipment, Power & Facilities",
+      "full_name": "ASML Holding",
+      "description": "EUV Lithography Systems"
+    },
+    "VRT": {
+      "id": "VRT",
+      "label": "VRT",
+      "type": "Company",
+      "tier": 0,
+      "tier_name": "Tier 0: Equipment, Power & Facilities",
+      "full_name": "Vertiv Holdings",
+      "description": "Liquid Cooling & Power Infrastructure"
+    },
+    "TSM": {
+      "id": "TSM",
+      "label": "TSM",
+      "type": "Company",
+      "tier": 1,
+      "tier_name": "Tier 1: Foundries, Packaging & Memory",
+      "full_name": "Taiwan Semiconductor (TSMC)",
+      "description": "Pure-play Foundry & CoWoS Packaging"
+    },
+    "MU": {
+      "id": "MU",
+      "label": "MU",
+      "type": "Company",
+      "tier": 1,
+      "tier_name": "Tier 1: Foundries, Packaging & Memory",
+      "full_name": "Micron Technology",
+      "description": "High Bandwidth Memory (HBM3e)"
+    },
+    "000660.KS": {
+      "id": "000660.KS",
+      "label": "000660.KS",
+      "type": "Company",
+      "tier": 1,
+      "tier_name": "Tier 1: Foundries, Packaging & Memory",
+      "full_name": "SK Hynix",
+      "description": "High Bandwidth Memory (HBM3e)"
+    },
+    "NVDA": {
+      "id": "NVDA",
+      "label": "NVDA",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "full_name": "NVIDIA",
+      "description": "AI Superchips (Hopper & Blackwell)"
+    },
+    "AVGO": {
+      "id": "AVGO",
+      "label": "AVGO",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "full_name": "Broadcom",
+      "description": "Custom AI ASICs & Networking Silicon"
+    },
+    "AMD": {
+      "id": "AMD",
+      "label": "AMD",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "full_name": "Advanced Micro Devices",
+      "description": "AI Accelerators (MI300X/MI325X)"
+    },
+    "ANET": {
+      "id": "ANET",
+      "label": "ANET",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "full_name": "Arista Networks",
+      "description": "AI Data Center Switching & Optics"
+    },
+    "SMCI": {
+      "id": "SMCI",
+      "label": "SMCI",
+      "type": "Company",
+      "tier": 3,
+      "tier_name": "Tier 3: AI Server Integrators & Systems",
+      "full_name": "Super Micro Computer",
+      "description": "AI Server Integrator & Direct Liquid Cooling"
+    },
+    "MSFT": {
+      "id": "MSFT",
+      "label": "MSFT",
+      "type": "Company",
+      "tier": 4,
+      "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "full_name": "Microsoft",
+      "description": "Azure AI Cloud & Copilot"
+    },
+    "AMZN": {
+      "id": "AMZN",
+      "label": "AMZN",
+      "type": "Company",
+      "tier": 4,
+      "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "full_name": "Amazon AWS",
+      "description": "AWS Cloud Infrastructure & Trainium"
+    },
+    "GOOGL": {
+      "id": "GOOGL",
+      "label": "GOOGL",
+      "type": "Company",
+      "tier": 4,
+      "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "full_name": "Alphabet / Google",
+      "description": "Google Cloud & TPU Infrastructure"
+    },
+    "META": {
+      "id": "META",
+      "label": "META",
+      "type": "Company",
+      "tier": 4,
+      "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "full_name": "Meta Platforms",
+      "description": "Meta AI Infrastructure & Llama"
+    },
+    "AAPL": {
+      "id": "AAPL",
+      "label": "AAPL",
+      "type": "Company",
+      "tier": 4,
+      "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "full_name": "Apple",
+      "description": "Apple Intelligence Private Cloud Compute"
+    },
+    "IREN": {
+      "id": "IREN",
+      "label": "IREN",
+      "type": "Company",
+      "tier": 4,
+      "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "full_name": null,
+      "description": null
+    },
+    "LITE": {
+      "id": "LITE",
+      "label": "LITE",
+      "type": "Company",
+      "tier": 1,
+      "tier_name": "Tier 1: Foundries, Packaging & Memory",
+      "full_name": null,
+      "description": null
+    },
+    "MRVL": {
+      "id": "MRVL",
+      "label": "MRVL",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "full_name": null,
+      "description": null
+    },
+    "INTC": {
+      "id": "INTC",
+      "label": "INTC",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "full_name": null,
+      "description": null
+    },
+    "CRWV": {
+      "id": "CRWV",
+      "label": "CRWV",
+      "type": "Company",
+      "tier": 4,
+      "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "full_name": null,
+      "description": null
+    },
+    "ORCL": {
+      "id": "ORCL",
+      "label": "ORCL",
+      "type": "Company",
+      "tier": 4,
+      "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "full_name": null,
+      "description": null
+    },
+    "VST": {
+      "id": "VST",
+      "label": "VST",
+      "type": "Company",
+      "tier": 0,
+      "tier_name": "Tier 0: Equipment, Power & Facilities",
+      "full_name": null,
+      "description": null
+    },
+    "CEG": {
+      "id": "CEG",
+      "label": "CEG",
+      "type": "Company",
+      "tier": 0,
+      "tier_name": "Tier 0: Equipment, Power & Facilities",
+      "full_name": null,
+      "description": null
+    },
+    "AMAT": {
+      "id": "AMAT",
+      "label": "AMAT",
+      "type": "Company",
+      "tier": 0,
+      "tier_name": "Tier 0: Equipment, Power & Facilities",
+      "full_name": null,
+      "description": null
+    },
+    "LRCX": {
+      "id": "LRCX",
+      "label": "LRCX",
+      "type": "Company",
+      "tier": 0,
+      "tier_name": "Tier 0: Equipment, Power & Facilities",
+      "full_name": null,
+      "description": null
+    },
+    "KLAC": {
+      "id": "KLAC",
+      "label": "KLAC",
+      "type": "Company",
+      "tier": 0,
+      "tier_name": "Tier 0: Equipment, Power & Facilities",
+      "full_name": null,
+      "description": null
+    },
+    "COHR": {
+      "id": "COHR",
+      "label": "COHR",
+      "type": "Company",
+      "tier": 1,
+      "tier_name": "Tier 1: Foundries, Packaging & Memory",
+      "full_name": null,
+      "description": null
+    },
+    "ALAB": {
+      "id": "ALAB",
+      "label": "ALAB",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "full_name": null,
+      "description": null
+    },
+    "DELL": {
+      "id": "DELL",
+      "label": "DELL",
+      "type": "Company",
+      "tier": 3,
+      "tier_name": "Tier 3: AI Server Integrators & Systems",
+      "full_name": null,
+      "description": null
+    },
+    "HPE": {
+      "id": "HPE",
+      "label": "HPE",
+      "type": "Company",
+      "tier": 3,
+      "tier_name": "Tier 3: AI Server Integrators & Systems",
+      "full_name": null,
+      "description": null
+    },
+    "TECK": {
+      "id": "TECK",
+      "label": "TECK",
+      "type": "Company",
+      "tier": -1,
+      "tier_name": "Tier -1: Raw Materials & Specialty Inputs",
+      "full_name": "Teck Resources",
+      "description": "Copper & germanium byproduct"
+    },
+    "CCJ": {
+      "id": "CCJ",
+      "label": "CCJ",
+      "type": "Company",
+      "tier": -1,
+      "tier_name": "Tier -1: Raw Materials & Specialty Inputs",
+      "full_name": "Cameco",
+      "description": "Uranium fuel for nuclear generation"
+    },
+    "ENTG": {
+      "id": "ENTG",
+      "label": "ENTG",
+      "type": "Company",
+      "tier": -1,
+      "tier_name": "Tier -1: Raw Materials & Specialty Inputs",
+      "full_name": "Entegris",
+      "description": "Fab materials, filtration & contamination control"
+    },
+    "LIN": {
+      "id": "LIN",
+      "label": "LIN",
+      "type": "Company",
+      "tier": -1,
+      "tier_name": "Tier -1: Raw Materials & Specialty Inputs",
+      "full_name": "Linde",
+      "description": "Industrial gases (nitrogen, helium, neon)"
+    },
+    "PLAB": {
+      "id": "PLAB",
+      "label": "PLAB",
+      "type": "Company",
+      "tier": -1,
+      "tier_name": "Tier -1: Raw Materials & Specialty Inputs",
+      "full_name": "Photronics",
+      "description": "Photomasks for wafer lithography"
+    },
+    "4063.T": {
+      "id": "4063.T",
+      "label": "4063.T",
+      "type": "Company",
+      "tier": -1,
+      "tier_name": "Tier -1: Raw Materials & Specialty Inputs",
+      "full_name": "Shin-Etsu Chemical",
+      "description": "Silicon wafers, photoresist, quartz"
+    },
+    "3436.T": {
+      "id": "3436.T",
+      "label": "3436.T",
+      "type": "Company",
+      "tier": -1,
+      "tier_name": "Tier -1: Raw Materials & Specialty Inputs",
+      "full_name": "SUMCO",
+      "description": "Silicon wafers"
+    }
+  },
+  "edges": [
+    {
+      "source": "ASML",
+      "target": "TSM",
+      "type": "SUPPLIES_TO",
+      "notes": "EUV Lithography Systems",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "VRT",
+      "target": "MSFT",
+      "type": "SUPPLIES_TO",
+      "notes": "Hyperscale Thermal Management",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "VRT",
+      "target": "SMCI",
+      "type": "SUPPLIES_TO",
+      "notes": "Liquid Cooling Distribution Units",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "TSM",
+      "target": "ALAB",
+      "type": "SUPPLIES_TO",
+      "notes": null,
+      "source_form": "10-K",
+      "accession_no": "0001736297-26-000010",
+      "as_of": "2026-02-20",
+      "stake_pct": null
+    },
+    {
+      "source": "TSM",
+      "target": "AAPL",
+      "type": "SUPPLIES_TO",
+      "notes": "A18 Pro & M4 Advanced Silicon Fab",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "TSM",
+      "target": "AVGO",
+      "type": "SUPPLIES_TO",
+      "notes": "Custom Silicon Fabrication",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "TSM",
+      "target": "AMD",
+      "type": "SUPPLIES_TO",
+      "notes": "Wafer Fabrication & 2.5D Packaging",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "TSM",
+      "target": "NVDA",
+      "type": "SUPPLIES_TO",
+      "notes": "3nm/4nm Wafer Fab & CoWoS Packaging",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "MU",
+      "target": "NVDA",
+      "type": "SUPPLIES_TO",
+      "notes": "HBM3e Memory Stacks",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "000660.KS",
+      "target": "NVDA",
+      "type": "SUPPLIES_TO",
+      "notes": "HBM3e Memory Stacks",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "HPE",
+      "type": "SUPPLIES_TO",
+      "notes": "AI server integration (curated baseline, same class as SMCI)",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "DELL",
+      "type": "SUPPLIES_TO",
+      "notes": "AI server integration (curated baseline, same class as SMCI)",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "AAPL",
+      "type": "SUPPLIES_TO",
+      "notes": "AI Server Clusters for Apple Intelligence",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "META",
+      "type": "SUPPLIES_TO",
+      "notes": "Large AI Training Clusters",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "GOOGL",
+      "type": "SUPPLIES_TO",
+      "notes": "AI Supercomputing Clusters",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "AMZN",
+      "type": "SUPPLIES_TO",
+      "notes": "DGX Cloud & UltraClusters",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "MSFT",
+      "type": "SUPPLIES_TO",
+      "notes": "Blackwell & Hopper Superclusters",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "SMCI",
+      "type": "SUPPLIES_TO",
+      "notes": "HGX B200 / H100 Motherboards",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "AMZN",
+      "type": "PARTNERS_WITH",
+      "notes": "AWS building with NVIDIA Vera CPUs",
+      "source_form": "8-K",
+      "accession_no": "0001045810-26-000088",
+      "as_of": "2026-11-17",
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "ORCL",
+      "type": "PARTNERS_WITH",
+      "notes": "Oracle Cloud Infrastructure building with NVIDIA Vera CPUs",
+      "source_form": "8-K",
+      "accession_no": "0001045810-26-000088",
+      "as_of": "2026-11-17",
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "CRWV",
+      "type": "PARTNERS_WITH",
+      "notes": "building with NVIDIA Vera CPUs",
+      "source_form": "8-K",
+      "accession_no": "0001045810-26-000088",
+      "as_of": "2026-11-17",
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "MSFT",
+      "type": "PARTNERS_WITH",
+      "notes": "advancing infrastructure for Vera Rubin",
+      "source_form": "8-K",
+      "accession_no": "0001045810-26-000088",
+      "as_of": "2026-11-17",
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "META",
+      "type": "PARTNERS_WITH",
+      "notes": "advancing infrastructure for Vera Rubin; expanded collaboration on AI agent Muse and deployment of Vera Rubin, Vera CPUs, Spectrum-X and BlueField-4",
+      "source_form": "8-K",
+      "accession_no": "0001045810-26-000088",
+      "as_of": "2026-11-17",
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "GOOGL",
+      "type": "PARTNERS_WITH",
+      "notes": "advancing infrastructure for Vera Rubin",
+      "source_form": "8-K",
+      "accession_no": "0001045810-26-000088",
+      "as_of": "2026-11-17",
+      "stake_pct": null
+    },
+    {
+      "source": "NVDA",
+      "target": "MRVL",
+      "type": "INVESTED_IN",
+      "notes": "NVIDIA invested $2 billion in Marvell as part of the March 2026 partnership",
+      "source_form": "DEF 14A",
+      "accession_no": "0001104659-26-060253",
+      "as_of": "2026-05-13",
+      "stake_pct": null
+    },
+    {
+      "source": "AVGO",
+      "target": "ANET",
+      "type": "SUPPLIES_TO",
+      "notes": "VeloCloud SD-WAN portfolio acquired by Arista from Broadcom",
+      "source_form": "DEF 14A",
+      "accession_no": "0001193125-26-158942",
+      "as_of": "2026-04-16",
+      "stake_pct": null
+    },
+    {
+      "source": "AVGO",
+      "target": "META",
+      "type": "SUPPLIES_TO",
+      "notes": "MTIA Custom AI Silicon",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "AVGO",
+      "target": "GOOGL",
+      "type": "SUPPLIES_TO",
+      "notes": "Custom TPU Co-Design & SerDes",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "AMD",
+      "target": "SMCI",
+      "type": "SUPPLIES_TO",
+      "notes": null,
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "ANET",
+      "target": "META",
+      "type": "SUPPLIES_TO",
+      "notes": "AI Cluster Fabric",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "ANET",
+      "target": "MSFT",
+      "type": "SUPPLIES_TO",
+      "notes": "400G/800G AI Back-end Switching",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "ANET",
+      "target": "MSFT",
+      "type": "PARTNERS_WITH",
+      "notes": "open standards-based rack-scale AI network architectures",
+      "source_form": "8-K",
+      "accession_no": "0001596532-26-000252",
+      "as_of": "2026-11-03",
+      "stake_pct": null
+    },
+    {
+      "source": "ANET",
+      "target": "META",
+      "type": "PARTNERS_WITH",
+      "notes": "open standards-based rack-scale AI network architectures",
+      "source_form": "8-K",
+      "accession_no": "0001596532-26-000252",
+      "as_of": "2026-11-03",
+      "stake_pct": null
+    },
+    {
+      "source": "ANET",
+      "target": "AVGO",
+      "type": "PARTNERS_WITH",
+      "notes": "open standards-based rack-scale AI network architectures",
+      "source_form": "8-K",
+      "accession_no": "0001596532-26-000252",
+      "as_of": "2026-11-03",
+      "stake_pct": null
+    },
+    {
+      "source": "ANET",
+      "target": "AMD",
+      "type": "PARTNERS_WITH",
+      "notes": "open standards-based rack-scale AI network architectures",
+      "source_form": "8-K",
+      "accession_no": "0001596532-26-000252",
+      "as_of": "2026-11-03",
+      "stake_pct": null
+    },
+    {
+      "source": "SMCI",
+      "target": "AMZN",
+      "type": "SUPPLIES_TO",
+      "notes": "DLC Server Racks",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "SMCI",
+      "target": "MSFT",
+      "type": "SUPPLIES_TO",
+      "notes": "Turnkey AI Server Racks",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "AMZN",
+      "target": "ORCL",
+      "type": "PARTNERS_WITH",
+      "notes": "new AWS agreement",
+      "source_form": "8-K",
+      "accession_no": "0001018724-26-000038",
+      "as_of": "2026-10-29",
+      "stake_pct": null
+    },
+    {
+      "source": "AMZN",
+      "target": "NVDA",
+      "type": "PARTNERS_WITH",
+      "notes": "new AWS agreement",
+      "source_form": "8-K",
+      "accession_no": "0001018724-26-000038",
+      "as_of": "2026-10-29",
+      "stake_pct": null
+    },
+    {
+      "source": "AMZN",
+      "target": "META",
+      "type": "PARTNERS_WITH",
+      "notes": "new AWS agreement",
+      "source_form": "8-K",
+      "accession_no": "0001018724-26-000038",
+      "as_of": "2026-10-29",
+      "stake_pct": null
+    },
+    {
+      "source": "IREN",
+      "target": "NVDA",
+      "type": "PARTNERS_WITH",
+      "notes": "NVIDIA Exemplar Cloud status for GB300 NVL72 systems",
+      "source_form": "8-K",
+      "accession_no": "0001878848-26-000065",
+      "as_of": "2026-11-05",
+      "stake_pct": null
+    },
+    {
+      "source": "IREN",
+      "target": "MSFT",
+      "type": "SUPPLIES_TO",
+      "notes": "Horizon 1 AI cloud capacity delivered to Microsoft",
+      "source_form": "8-K",
+      "accession_no": "0001878848-26-000065",
+      "as_of": "2026-11-05",
+      "stake_pct": null
+    },
+    {
+      "source": "MRVL",
+      "target": "NVDA",
+      "type": "PARTNERS_WITH",
+      "notes": "strategic partnership connecting Marvell custom silicon and networking to NVIDIA AI ecosystem",
+      "source_form": "DEF 14A",
+      "accession_no": "0001104659-26-060253",
+      "as_of": "2026-05-13",
+      "stake_pct": null
+    },
+    {
+      "source": "MRVL",
+      "target": "LITE",
+      "type": "PARTNERS_WITH",
+      "notes": "merger agreement; Marvell to acquire Lumentum",
+      "source_form": "8-K",
+      "accession_no": "0001193125-26-442758",
+      "as_of": "2026-11-02",
+      "stake_pct": null
+    },
+    {
+      "source": "INTC",
+      "target": "SMCI",
+      "type": "SUPPLIES_TO",
+      "notes": null,
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "INTC",
+      "target": "AMD",
+      "type": "PARTNERS_WITH",
+      "notes": "collaborated to bring x86 CPU optimizations for PyTorch together in oneDNN",
+      "source_form": "8-K",
+      "accession_no": "0000050863-26-000188",
+      "as_of": "2026-10-29",
+      "stake_pct": null
+    },
+    {
+      "source": "VST",
+      "target": "AMZN",
+      "type": "SUPPLIES_TO",
+      "notes": "20-year PPA for 1,200 MW carbon-free power from Comanche Peak Nuclear Power Plant",
+      "source_form": "DEF 14A",
+      "accession_no": "0001628280-26-019029",
+      "as_of": "2026-03-18",
+      "stake_pct": null
+    },
+    {
+      "source": "VST",
+      "target": "META",
+      "type": "SUPPLIES_TO",
+      "notes": "20-year PPAs to supply 2,609 MW carbon-free power and capacity from PJM nuclear power plants",
+      "source_form": "DEF 14A",
+      "accession_no": "0001628280-26-019029",
+      "as_of": "2026-03-18",
+      "stake_pct": null
+    },
+    {
+      "source": "CEG",
+      "target": "META",
+      "type": "SUPPLIES_TO",
+      "notes": "20-year PPA for output of Clinton Clean Energy Center, 1,121 MW",
+      "source_form": "DEF 14A",
+      "accession_no": "0001552781-26-000140",
+      "as_of": "2026-03-19",
+      "stake_pct": null
+    },
+    {
+      "source": "CEG",
+      "target": "GOOGL",
+      "type": "SUPPLIES_TO",
+      "notes": "20-year PPA and 15-year financial energy load following agreement for 2,700 MW in PJM",
+      "source_form": "8-K",
+      "accession_no": "0001868275-26-000116",
+      "as_of": "2026-11-09",
+      "stake_pct": null
+    },
+    {
+      "source": "CEG",
+      "target": "AMZN",
+      "type": "SUPPLIES_TO",
+      "notes": "20-year 690 MW PPA and related retail supply agreement",
+      "source_form": "8-K",
+      "accession_no": "0001868275-26-000116",
+      "as_of": "2026-11-09",
+      "stake_pct": null
+    },
+    {
+      "source": "AMAT",
+      "target": "TSM",
+      "type": "SUPPLIES_TO",
+      "notes": "Wafer fabrication equipment (curated baseline, same class as ASML)",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "LRCX",
+      "target": "TSM",
+      "type": "SUPPLIES_TO",
+      "notes": "Etch/deposition equipment (curated baseline, same class as ASML)",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "KLAC",
+      "target": "TSM",
+      "type": "SUPPLIES_TO",
+      "notes": null,
+      "source_form": "10-K",
+      "accession_no": "0000319201-26-000027",
+      "as_of": "2026-08-06",
+      "stake_pct": null
+    },
+    {
+      "source": "COHR",
+      "target": "NVDA",
+      "type": "SUPPLIES_TO",
+      "notes": "optical transceivers supporting NVIDIA NVLink",
+      "source_form": "10-K",
+      "accession_no": "0000820318-26-000020",
+      "as_of": "2026-08-14",
+      "stake_pct": null
+    },
+    {
+      "source": "TECK",
+      "target": "COHR",
+      "type": "SUPPLIES_TO",
+      "notes": "Germanium for optical components",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "CCJ",
+      "target": "CEG",
+      "type": "SUPPLIES_TO",
+      "notes": "Uranium fuel supply for nuclear generation",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "ENTG",
+      "target": "TSM",
+      "type": "SUPPLIES_TO",
+      "notes": "Fab materials, filtration & contamination control",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "LIN",
+      "target": "TSM",
+      "type": "SUPPLIES_TO",
+      "notes": "Industrial gases to wafer fabs",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "PLAB",
+      "target": "TSM",
+      "type": "SUPPLIES_TO",
+      "notes": "Photomasks for wafer lithography",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "4063.T",
+      "target": "TSM",
+      "type": "SUPPLIES_TO",
+      "notes": "Silicon wafers, photoresist & quartz",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    },
+    {
+      "source": "3436.T",
+      "target": "TSM",
+      "type": "SUPPLIES_TO",
+      "notes": "Silicon wafers",
+      "source_form": null,
+      "accession_no": null,
+      "as_of": null,
+      "stake_pct": null
+    }
+  ],
+  "filings": {
+    "IREN_0001878848-26-000052": {
+      "id": "IREN_0001878848-26-000052",
+      "ticker": "IREN",
+      "accession_no": "0001878848-26-000052",
+      "form": "10-K",
+      "filing_date": "2026-08-27"
+    },
+    "LITE_0001628280-26-057358": {
+      "id": "LITE_0001628280-26-057358",
+      "ticker": "LITE",
+      "accession_no": "0001628280-26-057358",
+      "form": "10-K",
+      "filing_date": "2026-08-17"
+    },
+    "MRVL_0001835632-26-000011": {
+      "id": "MRVL_0001835632-26-000011",
+      "ticker": "MRVL",
+      "accession_no": "0001835632-26-000011",
+      "form": "10-K",
+      "filing_date": "2026-03-11"
+    },
+    "SMCI_0001375365-26-000022": {
+      "id": "SMCI_0001375365-26-000022",
+      "ticker": "SMCI",
+      "accession_no": "0001375365-26-000022",
+      "form": "10-K",
+      "filing_date": "2026-08-31"
+    },
+    "CRWV_0001769628-26-000104": {
+      "id": "CRWV_0001769628-26-000104",
+      "ticker": "CRWV",
+      "accession_no": "0001769628-26-000104",
+      "form": "10-K",
+      "filing_date": "2026-03-02"
+    },
+    "ORCL_0001193125-26-277521": {
+      "id": "ORCL_0001193125-26-277521",
+      "ticker": "ORCL",
+      "accession_no": "0001193125-26-277521",
+      "form": "10-K",
+      "filing_date": "2026-06-22"
+    },
+    "ORCL_0001193125-26-447507": {
+      "id": "ORCL_0001193125-26-447507",
+      "ticker": "ORCL",
+      "accession_no": "0001193125-26-447507",
+      "form": "8-K",
+      "filing_date": "2026-11-04"
+    },
+    "ORCL_0001193125-26-435853": {
+      "id": "ORCL_0001193125-26-435853",
+      "ticker": "ORCL",
+      "accession_no": "0001193125-26-435853",
+      "form": "8-K",
+      "filing_date": "2026-10-28"
+    },
+    "ORCL_0001193125-26-402816": {
+      "id": "ORCL_0001193125-26-402816",
+      "ticker": "ORCL",
+      "accession_no": "0001193125-26-402816",
+      "form": "DEF 14A",
+      "filing_date": "2026-09-25"
+    },
+    "ORCL_0001193125-18-017571": {
+      "id": "ORCL_0001193125-18-017571",
+      "ticker": "ORCL",
+      "accession_no": "0001193125-18-017571",
+      "form": "SC 13D",
+      "filing_date": "2018-01-23"
+    },
+    "ORCL_0001104659-24-021637": {
+      "id": "ORCL_0001104659-24-021637",
+      "ticker": "ORCL",
+      "accession_no": "0001104659-24-021637",
+      "form": "SC 13G",
+      "filing_date": "2024-02-13"
+    },
+    "NVDA_0001045810-26-000021": {
+      "id": "NVDA_0001045810-26-000021",
+      "ticker": "NVDA",
+      "accession_no": "0001045810-26-000021",
+      "form": "10-K",
+      "filing_date": "2026-02-25"
+    },
+    "NVDA_0001045810-26-000088": {
+      "id": "NVDA_0001045810-26-000088",
+      "ticker": "NVDA",
+      "accession_no": "0001045810-26-000088",
+      "form": "8-K",
+      "filing_date": "2026-11-17"
+    },
+    "NVDA_0001045810-26-000082": {
+      "id": "NVDA_0001045810-26-000082",
+      "ticker": "NVDA",
+      "accession_no": "0001045810-26-000082",
+      "form": "8-K",
+      "filing_date": "2026-11-12"
+    },
+    "NVDA_0001045810-26-000036": {
+      "id": "NVDA_0001045810-26-000036",
+      "ticker": "NVDA",
+      "accession_no": "0001045810-26-000036",
+      "form": "DEF 14A",
+      "filing_date": "2026-05-12"
+    },
+    "NVDA_0000315066-24-002826": {
+      "id": "NVDA_0000315066-24-002826",
+      "ticker": "NVDA",
+      "accession_no": "0000315066-24-002826",
+      "form": "SC 13G",
+      "filing_date": "2024-11-12"
+    },
+    "AAPL_0001140361-26-042798": {
+      "id": "AAPL_0001140361-26-042798",
+      "ticker": "AAPL",
+      "accession_no": "0001140361-26-042798",
+      "form": "8-K",
+      "filing_date": "2026-11-09"
+    },
+    "AAPL_0000320193-26-000026": {
+      "id": "AAPL_0000320193-26-000026",
+      "ticker": "AAPL",
+      "accession_no": "0000320193-26-000026",
+      "form": "10-K",
+      "filing_date": "2026-11-03"
+    },
+    "AAPL_0000320193-26-000024": {
+      "id": "AAPL_0000320193-26-000024",
+      "ticker": "AAPL",
+      "accession_no": "0000320193-26-000024",
+      "form": "8-K",
+      "filing_date": "2026-11-02"
+    },
+    "AAPL_0001308179-26-000008": {
+      "id": "AAPL_0001308179-26-000008",
+      "ticker": "AAPL",
+      "accession_no": "0001308179-26-000008",
+      "form": "DEF 14A",
+      "filing_date": "2026-01-08"
+    },
+    "AAPL_0001005150-97-000249": {
+      "id": "AAPL_0001005150-97-000249",
+      "ticker": "AAPL",
+      "accession_no": "0001005150-97-000249",
+      "form": "SC 13D",
+      "filing_date": "1997-04-09"
+    },
+    "AAPL_0001193125-24-036431": {
+      "id": "AAPL_0001193125-24-036431",
+      "ticker": "AAPL",
+      "accession_no": "0001193125-24-036431",
+      "form": "SC 13G",
+      "filing_date": "2024-02-14"
+    },
+    "AMD_0000002488-26-000021": {
+      "id": "AMD_0000002488-26-000021",
+      "ticker": "AMD",
+      "accession_no": "0000002488-26-000021",
+      "form": "10-K",
+      "filing_date": "2026-02-04"
+    },
+    "AMD_0001193125-26-462340": {
+      "id": "AMD_0001193125-26-462340",
+      "ticker": "AMD",
+      "accession_no": "0001193125-26-462340",
+      "form": "8-K",
+      "filing_date": "2026-11-16"
+    },
+    "AMD_0000002488-26-000188": {
+      "id": "AMD_0000002488-26-000188",
+      "ticker": "AMD",
+      "accession_no": "0000002488-26-000188",
+      "form": "8-K",
+      "filing_date": "2026-11-03"
+    },
+    "AMD_0001193125-26-129057": {
+      "id": "AMD_0001193125-26-129057",
+      "ticker": "AMD",
+      "accession_no": "0001193125-26-129057",
+      "form": "DEF 14A",
+      "filing_date": "2026-03-27"
+    },
+    "AMD_0000947871-19-000079": {
+      "id": "AMD_0000947871-19-000079",
+      "ticker": "AMD",
+      "accession_no": "0000947871-19-000079",
+      "form": "SC 13D",
+      "filing_date": "2019-02-07"
+    },
+    "AMD_0001104659-24-020184": {
+      "id": "AMD_0001104659-24-020184",
+      "ticker": "AMD",
+      "accession_no": "0001104659-24-020184",
+      "form": "SC 13G",
+      "filing_date": "2024-02-13"
+    },
+    "AMZN_0001018724-26-000004": {
+      "id": "AMZN_0001018724-26-000004",
+      "ticker": "AMZN",
+      "accession_no": "0001018724-26-000004",
+      "form": "10-K",
+      "filing_date": "2026-02-06"
+    },
+    "AMZN_0001018724-26-000038": {
+      "id": "AMZN_0001018724-26-000038",
+      "ticker": "AMZN",
+      "accession_no": "0001018724-26-000038",
+      "form": "8-K",
+      "filing_date": "2026-10-29"
+    },
+    "AMZN_0001104659-26-107526": {
+      "id": "AMZN_0001104659-26-107526",
+      "ticker": "AMZN",
+      "accession_no": "0001104659-26-107526",
+      "form": "8-K",
+      "filing_date": "2026-09-14"
+    },
+    "AMZN_0001104659-26-041026": {
+      "id": "AMZN_0001104659-26-041026",
+      "ticker": "AMZN",
+      "accession_no": "0001104659-26-041026",
+      "form": "DEF 14A",
+      "filing_date": "2026-04-09"
+    },
+    "AMZN_0001193125-11-158575": {
+      "id": "AMZN_0001193125-11-158575",
+      "ticker": "AMZN",
+      "accession_no": "0001193125-11-158575",
+      "form": "SC 13D",
+      "filing_date": "2011-06-03"
+    },
+    "AMZN_0001104659-24-115906": {
+      "id": "AMZN_0001104659-24-115906",
+      "ticker": "AMZN",
+      "accession_no": "0001104659-24-115906",
+      "form": "SC 13G",
+      "filing_date": "2024-11-08"
+    },
+    "ANET_0001596532-26-000013": {
+      "id": "ANET_0001596532-26-000013",
+      "ticker": "ANET",
+      "accession_no": "0001596532-26-000013",
+      "form": "10-K",
+      "filing_date": "2026-02-17"
+    },
+    "ANET_0001596532-26-000252": {
+      "id": "ANET_0001596532-26-000252",
+      "ticker": "ANET",
+      "accession_no": "0001596532-26-000252",
+      "form": "8-K",
+      "filing_date": "2026-11-03"
+    },
+    "ANET_0001596532-26-000174": {
+      "id": "ANET_0001596532-26-000174",
+      "ticker": "ANET",
+      "accession_no": "0001596532-26-000174",
+      "form": "8-K",
+      "filing_date": "2026-08-04"
+    },
+    "ANET_0001193125-26-158942": {
+      "id": "ANET_0001193125-26-158942",
+      "ticker": "ANET",
+      "accession_no": "0001193125-26-158942",
+      "form": "DEF 14A",
+      "filing_date": "2026-04-16"
+    },
+    "ANET_0000932471-24-000845": {
+      "id": "ANET_0000932471-24-000845",
+      "ticker": "ANET",
+      "accession_no": "0000932471-24-000845",
+      "form": "SC 13G",
+      "filing_date": "2024-11-12"
+    },
+    "ASML_0001628280-26-011378": {
+      "id": "ASML_0001628280-26-011378",
+      "ticker": "ASML",
+      "accession_no": "0001628280-26-011378",
+      "form": "20-F",
+      "filing_date": "2026-02-25"
+    },
+    "ASML_0000315066-95-003022": {
+      "id": "ASML_0000315066-95-003022",
+      "ticker": "ASML",
+      "accession_no": "0000315066-95-003022",
+      "form": "SC 13D",
+      "filing_date": "1995-08-10"
+    },
+    "ASML_0001086364-24-006330": {
+      "id": "ASML_0001086364-24-006330",
+      "ticker": "ASML",
+      "accession_no": "0001086364-24-006330",
+      "form": "SC 13G",
+      "filing_date": "2024-02-05"
+    },
+    "AVGO_0001730168-25-000121": {
+      "id": "AVGO_0001730168-25-000121",
+      "ticker": "AVGO",
+      "accession_no": "0001730168-25-000121",
+      "form": "10-K",
+      "filing_date": "2025-12-18"
+    },
+    "AVGO_0001193125-26-434271": {
+      "id": "AVGO_0001193125-26-434271",
+      "ticker": "AVGO",
+      "accession_no": "0001193125-26-434271",
+      "form": "8-K",
+      "filing_date": "2026-10-27"
+    },
+    "AVGO_0001730168-26-000076": {
+      "id": "AVGO_0001730168-26-000076",
+      "ticker": "AVGO",
+      "accession_no": "0001730168-26-000076",
+      "form": "8-K",
+      "filing_date": "2026-09-02"
+    },
+    "AVGO_0001193125-26-085691": {
+      "id": "AVGO_0001193125-26-085691",
+      "ticker": "AVGO",
+      "accession_no": "0001193125-26-085691",
+      "form": "DEF 14A",
+      "filing_date": "2026-03-02"
+    },
+    "AVGO_0001422849-24-000066": {
+      "id": "AVGO_0001422849-24-000066",
+      "ticker": "AVGO",
+      "accession_no": "0001422849-24-000066",
+      "form": "SC 13G",
+      "filing_date": "2024-11-13"
+    },
+    "CRWV_0001769628-26-000461": {
+      "id": "CRWV_0001769628-26-000461",
+      "ticker": "CRWV",
+      "accession_no": "0001769628-26-000461",
+      "form": "8-K",
+      "filing_date": "2026-11-10"
+    },
+    "CRWV_0001769628-26-000432": {
+      "id": "CRWV_0001769628-26-000432",
+      "ticker": "CRWV",
+      "accession_no": "0001769628-26-000432",
+      "form": "8-K",
+      "filing_date": "2026-09-22"
+    },
+    "CRWV_0001769628-26-000191": {
+      "id": "CRWV_0001769628-26-000191",
+      "ticker": "CRWV",
+      "accession_no": "0001769628-26-000191",
+      "form": "DEF 14A",
+      "filing_date": "2026-04-22"
+    },
+    "CRWV_0000900440-22-000078": {
+      "id": "CRWV_0000900440-22-000078",
+      "ticker": "CRWV",
+      "accession_no": "0000900440-22-000078",
+      "form": "SC 13D",
+      "filing_date": "2022-05-26"
+    },
+    "GOOGL_0001652044-26-000018": {
+      "id": "GOOGL_0001652044-26-000018",
+      "ticker": "GOOGL",
+      "accession_no": "0001652044-26-000018",
+      "form": "10-K",
+      "filing_date": "2026-02-05"
+    },
+    "GOOGL_0001193125-26-449835": {
+      "id": "GOOGL_0001193125-26-449835",
+      "ticker": "GOOGL",
+      "accession_no": "0001193125-26-449835",
+      "form": "8-K",
+      "filing_date": "2026-11-05"
+    },
+    "GOOGL_0001652044-26-000080": {
+      "id": "GOOGL_0001652044-26-000080",
+      "ticker": "GOOGL",
+      "accession_no": "0001652044-26-000080",
+      "form": "8-K",
+      "filing_date": "2026-10-28"
+    },
+    "GOOGL_0001308179-26-000342": {
+      "id": "GOOGL_0001308179-26-000342",
+      "ticker": "GOOGL",
+      "accession_no": "0001308179-26-000342",
+      "form": "DEF 14A",
+      "filing_date": "2026-04-24"
+    },
+    "GOOGL_0001193125-24-036532": {
+      "id": "GOOGL_0001193125-24-036532",
+      "ticker": "GOOGL",
+      "accession_no": "0001193125-24-036532",
+      "form": "SC 13G",
+      "filing_date": "2024-02-14"
+    },
+    "INTC_0000050863-26-000011": {
+      "id": "INTC_0000050863-26-000011",
+      "ticker": "INTC",
+      "accession_no": "0000050863-26-000011",
+      "form": "10-K",
+      "filing_date": "2026-01-23"
+    },
+    "INTC_0000050863-26-000188": {
+      "id": "INTC_0000050863-26-000188",
+      "ticker": "INTC",
+      "accession_no": "0000050863-26-000188",
+      "form": "8-K",
+      "filing_date": "2026-10-29"
+    },
+    "INTC_0001193125-26-346806": {
+      "id": "INTC_0001193125-26-346806",
+      "ticker": "INTC",
+      "accession_no": "0001193125-26-346806",
+      "form": "8-K",
+      "filing_date": "2026-08-12"
+    },
+    "INTC_0000050863-26-000061": {
+      "id": "INTC_0000050863-26-000061",
+      "ticker": "INTC",
+      "accession_no": "0000050863-26-000061",
+      "form": "DEF 14A",
+      "filing_date": "2026-03-23"
+    },
+    "INTC_0001193125-21-022785": {
+      "id": "INTC_0001193125-21-022785",
+      "ticker": "INTC",
+      "accession_no": "0001193125-21-022785",
+      "form": "SC 13D",
+      "filing_date": "2021-01-29"
+    },
+    "INTC_0000050863-24-000116": {
+      "id": "INTC_0000050863-24-000116",
+      "ticker": "INTC",
+      "accession_no": "0000050863-24-000116",
+      "form": "SC 13G",
+      "filing_date": "2024-07-25"
+    },
+    "IREN_0001878848-25-000020": {
+      "id": "IREN_0001878848-25-000020",
+      "ticker": "IREN",
+      "accession_no": "0001878848-25-000020",
+      "form": "20-F",
+      "filing_date": "2025-03-20"
+    },
+    "IREN_0001878848-26-000065": {
+      "id": "IREN_0001878848-26-000065",
+      "ticker": "IREN",
+      "accession_no": "0001878848-26-000065",
+      "form": "8-K",
+      "filing_date": "2026-11-05"
+    },
+    "IREN_0001878848-26-000051": {
+      "id": "IREN_0001878848-26-000051",
+      "ticker": "IREN",
+      "accession_no": "0001878848-26-000051",
+      "form": "8-K",
+      "filing_date": "2026-08-27"
+    },
+    "IREN_0001140361-26-039451": {
+      "id": "IREN_0001140361-26-039451",
+      "ticker": "IREN",
+      "accession_no": "0001140361-26-039451",
+      "form": "DEF 14A",
+      "filing_date": "2026-10-13"
+    },
+    "IREN_0001062993-23-018254": {
+      "id": "IREN_0001062993-23-018254",
+      "ticker": "IREN",
+      "accession_no": "0001062993-23-018254",
+      "form": "SC 13D",
+      "filing_date": "2023-09-19"
+    },
+    "IREN_0001140361-24-007726": {
+      "id": "IREN_0001140361-24-007726",
+      "ticker": "IREN",
+      "accession_no": "0001140361-24-007726",
+      "form": "SC 13G",
+      "filing_date": "2024-02-14"
+    },
+    "LITE_0001193125-26-442758": {
+      "id": "LITE_0001193125-26-442758",
+      "ticker": "LITE",
+      "accession_no": "0001193125-26-442758",
+      "form": "8-K",
+      "filing_date": "2026-11-02"
+    },
+    "LITE_0001628280-26-068655": {
+      "id": "LITE_0001628280-26-068655",
+      "ticker": "LITE",
+      "accession_no": "0001628280-26-068655",
+      "form": "8-K",
+      "filing_date": "2026-11-02"
+    },
+    "LITE_0001308179-26-000420": {
+      "id": "LITE_0001308179-26-000420",
+      "ticker": "LITE",
+      "accession_no": "0001308179-26-000420",
+      "form": "DEF 14A",
+      "filing_date": "2026-10-06"
+    },
+    "LITE_0000902664-24-006657": {
+      "id": "LITE_0000902664-24-006657",
+      "ticker": "LITE",
+      "accession_no": "0000902664-24-006657",
+      "form": "SC 13G",
+      "filing_date": "2024-11-14"
+    },
+    "META_0001628280-26-003942": {
+      "id": "META_0001628280-26-003942",
+      "ticker": "META",
+      "accession_no": "0001628280-26-003942",
+      "form": "10-K",
+      "filing_date": "2026-01-29"
+    },
+    "META_0001193125-26-458525": {
+      "id": "META_0001193125-26-458525",
+      "ticker": "META",
+      "accession_no": "0001193125-26-458525",
+      "form": "8-K",
+      "filing_date": "2026-11-12"
+    },
+    "META_0001193125-26-450074": {
+      "id": "META_0001193125-26-450074",
+      "ticker": "META",
+      "accession_no": "0001193125-26-450074",
+      "form": "8-K",
+      "filing_date": "2026-11-05"
+    },
+    "META_0001628280-26-025532": {
+      "id": "META_0001628280-26-025532",
+      "ticker": "META",
+      "accession_no": "0001628280-26-025532",
+      "form": "DEF 14A",
+      "filing_date": "2026-04-16"
+    },
+    "META_0001193125-24-036200": {
+      "id": "META_0001193125-24-036200",
+      "ticker": "META",
+      "accession_no": "0001193125-24-036200",
+      "form": "SC 13G",
+      "filing_date": "2024-02-14"
+    },
+    "MRVL_0001835632-26-000026": {
+      "id": "MRVL_0001835632-26-000026",
+      "ticker": "MRVL",
+      "accession_no": "0001835632-26-000026",
+      "form": "8-K",
+      "filing_date": "2026-11-12"
+    },
+    "MRVL_0001193125-26-442717": {
+      "id": "MRVL_0001193125-26-442717",
+      "ticker": "MRVL",
+      "accession_no": "0001193125-26-442717",
+      "form": "8-K",
+      "filing_date": "2026-11-02"
+    },
+    "MRVL_0001104659-26-060253": {
+      "id": "MRVL_0001104659-26-060253",
+      "ticker": "MRVL",
+      "accession_no": "0001104659-26-060253",
+      "form": "DEF 14A",
+      "filing_date": "2026-05-13"
+    },
+    "MRVL_0001104659-24-021420": {
+      "id": "MRVL_0001104659-24-021420",
+      "ticker": "MRVL",
+      "accession_no": "0001104659-24-021420",
+      "form": "SC 13G",
+      "filing_date": "2024-02-13"
+    },
+    "MSFT_0001193125-26-323660": {
+      "id": "MSFT_0001193125-26-323660",
+      "ticker": "MSFT",
+      "accession_no": "0001193125-26-323660",
+      "form": "10-K",
+      "filing_date": "2026-07-29"
+    },
+    "MSFT_0001193125-26-448357": {
+      "id": "MSFT_0001193125-26-448357",
+      "ticker": "MSFT",
+      "accession_no": "0001193125-26-448357",
+      "form": "8-K",
+      "filing_date": "2026-11-05"
+    },
+    "MSFT_0001193125-26-447173": {
+      "id": "MSFT_0001193125-26-447173",
+      "ticker": "MSFT",
+      "accession_no": "0001193125-26-447173",
+      "form": "8-K",
+      "filing_date": "2026-11-04"
+    },
+    "MSFT_0001193125-26-427849": {
+      "id": "MSFT_0001193125-26-427849",
+      "ticker": "MSFT",
+      "accession_no": "0001193125-26-427849",
+      "form": "DEF 14A",
+      "filing_date": "2026-10-21"
+    },
+    "MSFT_0001193125-08-211640": {
+      "id": "MSFT_0001193125-08-211640",
+      "ticker": "MSFT",
+      "accession_no": "0001193125-08-211640",
+      "form": "SC 13D",
+      "filing_date": "2008-10-16"
+    },
+    "MSFT_0001104659-24-021466": {
+      "id": "MSFT_0001104659-24-021466",
+      "ticker": "MSFT",
+      "accession_no": "0001104659-24-021466",
+      "form": "SC 13G",
+      "filing_date": "2024-02-13"
+    },
+    "MU_0000723125-26-000023": {
+      "id": "MU_0000723125-26-000023",
+      "ticker": "MU",
+      "accession_no": "0000723125-26-000023",
+      "form": "10-K",
+      "filing_date": "2026-10-09"
+    },
+    "MU_0001104659-26-123389": {
+      "id": "MU_0001104659-26-123389",
+      "ticker": "MU",
+      "accession_no": "0001104659-26-123389",
+      "form": "8-K",
+      "filing_date": "2026-11-05"
+    },
+    "MU_0000723125-26-000018": {
+      "id": "MU_0000723125-26-000018",
+      "ticker": "MU",
+      "accession_no": "0000723125-26-000018",
+      "form": "8-K",
+      "filing_date": "2026-09-30"
+    },
+    "MU_0000723125-25-000038": {
+      "id": "MU_0000723125-25-000038",
+      "ticker": "MU",
+      "accession_no": "0000723125-25-000038",
+      "form": "DEF 14A",
+      "filing_date": "2025-11-25"
+    },
+    "MU_0000898432-17-000682": {
+      "id": "MU_0000898432-17-000682",
+      "ticker": "MU",
+      "accession_no": "0000898432-17-000682",
+      "form": "SC 13D",
+      "filing_date": "2017-06-28"
+    },
+    "MU_0001104659-24-021465": {
+      "id": "MU_0001104659-24-021465",
+      "ticker": "MU",
+      "accession_no": "0001104659-24-021465",
+      "form": "SC 13G",
+      "filing_date": "2024-02-13"
+    },
+    "SMCI_0001375365-26-000026": {
+      "id": "SMCI_0001375365-26-000026",
+      "ticker": "SMCI",
+      "accession_no": "0001375365-26-000026",
+      "form": "8-K",
+      "filing_date": "2026-11-03"
+    },
+    "SMCI_0001375365-26-000025": {
+      "id": "SMCI_0001375365-26-000025",
+      "ticker": "SMCI",
+      "accession_no": "0001375365-26-000025",
+      "form": "8-K",
+      "filing_date": "2026-10-20"
+    },
+    "SMCI_0001375365-26-000008": {
+      "id": "SMCI_0001375365-26-000008",
+      "ticker": "SMCI",
+      "accession_no": "0001375365-26-000008",
+      "form": "DEF 14A",
+      "filing_date": "2026-03-03"
+    },
+    "SMCI_0000902664-21-003183": {
+      "id": "SMCI_0000902664-21-003183",
+      "ticker": "SMCI",
+      "accession_no": "0000902664-21-003183",
+      "form": "SC 13D",
+      "filing_date": "2021-06-17"
+    },
+    "SMCI_0001104659-24-118677": {
+      "id": "SMCI_0001104659-24-118677",
+      "ticker": "SMCI",
+      "accession_no": "0001104659-24-118677",
+      "form": "SC 13G",
+      "filing_date": "2024-11-14"
+    },
+    "TSM_0001628280-26-025362": {
+      "id": "TSM_0001628280-26-025362",
+      "ticker": "TSM",
+      "accession_no": "0001628280-26-025362",
+      "form": "20-F",
+      "filing_date": "2026-04-16"
+    },
+    "TSM_0001086364-24-006327": {
+      "id": "TSM_0001086364-24-006327",
+      "ticker": "TSM",
+      "accession_no": "0001086364-24-006327",
+      "form": "SC 13G",
+      "filing_date": "2024-02-05"
+    },
+    "VRT_0001674101-26-000008": {
+      "id": "VRT_0001674101-26-000008",
+      "ticker": "VRT",
+      "accession_no": "0001674101-26-000008",
+      "form": "10-K",
+      "filing_date": "2026-02-13"
+    },
+    "VRT_0001628280-26-073564": {
+      "id": "VRT_0001628280-26-073564",
+      "ticker": "VRT",
+      "accession_no": "0001628280-26-073564",
+      "form": "8-K",
+      "filing_date": "2026-11-13"
+    },
+    "VRT_0001628280-26-067707": {
+      "id": "VRT_0001628280-26-067707",
+      "ticker": "VRT",
+      "accession_no": "0001628280-26-067707",
+      "form": "8-K",
+      "filing_date": "2026-10-28"
+    },
+    "VRT_0001193125-26-174898": {
+      "id": "VRT_0001193125-26-174898",
+      "ticker": "VRT",
+      "accession_no": "0001193125-26-174898",
+      "form": "DEF 14A",
+      "filing_date": "2026-04-24"
+    },
+    "VRT_0001104659-23-089353": {
+      "id": "VRT_0001104659-23-089353",
+      "ticker": "VRT",
+      "accession_no": "0001104659-23-089353",
+      "form": "SC 13D",
+      "filing_date": "2023-08-09"
+    },
+    "VRT_0000313028-24-000062": {
+      "id": "VRT_0000313028-24-000062",
+      "ticker": "VRT",
+      "accession_no": "0000313028-24-000062",
+      "form": "SC 13G",
+      "filing_date": "2024-11-13"
+    },
+    "ORCL_0001193125-26-470351": {
+      "id": "ORCL_0001193125-26-470351",
+      "ticker": "ORCL",
+      "accession_no": "0001193125-26-470351",
+      "form": "8-K",
+      "filing_date": "2026-11-20"
+    },
+    "VST_0001140361-26-044139": {
+      "id": "VST_0001140361-26-044139",
+      "ticker": "VST",
+      "accession_no": "0001140361-26-044139",
+      "form": "8-K",
+      "filing_date": "2026-11-16"
+    },
+    "VST_0001140361-26-042795": {
+      "id": "VST_0001140361-26-042795",
+      "ticker": "VST",
+      "accession_no": "0001140361-26-042795",
+      "form": "8-K",
+      "filing_date": "2026-11-09"
+    },
+    "VST_0001692819-26-000006": {
+      "id": "VST_0001692819-26-000006",
+      "ticker": "VST",
+      "accession_no": "0001692819-26-000006",
+      "form": "10-K",
+      "filing_date": "2026-02-27"
+    },
+    "VST_0001628280-26-019029": {
+      "id": "VST_0001628280-26-019029",
+      "ticker": "VST",
+      "accession_no": "0001628280-26-019029",
+      "form": "DEF 14A",
+      "filing_date": "2026-03-18"
+    },
+    "VST_0000315066-24-002935": {
+      "id": "VST_0000315066-24-002935",
+      "ticker": "VST",
+      "accession_no": "0000315066-24-002935",
+      "form": "SC 13G",
+      "filing_date": "2024-11-12"
+    },
+    "CEG_0001868275-26-000032": {
+      "id": "CEG_0001868275-26-000032",
+      "ticker": "CEG",
+      "accession_no": "0001868275-26-000032",
+      "form": "10-K",
+      "filing_date": "2026-02-24"
+    },
+    "CEG_0001868275-26-000116": {
+      "id": "CEG_0001868275-26-000116",
+      "ticker": "CEG",
+      "accession_no": "0001868275-26-000116",
+      "form": "8-K",
+      "filing_date": "2026-11-09"
+    },
+    "CEG_0001868275-26-000097": {
+      "id": "CEG_0001868275-26-000097",
+      "ticker": "CEG",
+      "accession_no": "0001868275-26-000097",
+      "form": "8-K",
+      "filing_date": "2026-08-06"
+    },
+    "CEG_0001552781-26-000140": {
+      "id": "CEG_0001552781-26-000140",
+      "ticker": "CEG",
+      "accession_no": "0001552781-26-000140",
+      "form": "DEF 14A",
+      "filing_date": "2026-03-19"
+    },
+    "CEG_0000080255-24-001480": {
+      "id": "CEG_0000080255-24-001480",
+      "ticker": "CEG",
+      "accession_no": "0000080255-24-001480",
+      "form": "SC 13G",
+      "filing_date": "2024-11-14"
+    },
+    "AMAT_0001628280-25-056742": {
+      "id": "AMAT_0001628280-25-056742",
+      "ticker": "AMAT",
+      "accession_no": "0001628280-25-056742",
+      "form": "10-K",
+      "filing_date": "2025-12-12"
+    },
+    "AMAT_0001628280-26-073360": {
+      "id": "AMAT_0001628280-26-073360",
+      "ticker": "AMAT",
+      "accession_no": "0001628280-26-073360",
+      "form": "8-K",
+      "filing_date": "2026-11-12"
+    },
+    "AMAT_0001628280-26-067303": {
+      "id": "AMAT_0001628280-26-067303",
+      "ticker": "AMAT",
+      "accession_no": "0001628280-26-067303",
+      "form": "8-K",
+      "filing_date": "2026-10-26"
+    },
+    "AMAT_0001193125-26-027307": {
+      "id": "AMAT_0001193125-26-027307",
+      "ticker": "AMAT",
+      "accession_no": "0001193125-26-027307",
+      "form": "DEF 14A",
+      "filing_date": "2026-01-28"
+    },
+    "AMAT_0001193125-09-256940": {
+      "id": "AMAT_0001193125-09-256940",
+      "ticker": "AMAT",
+      "accession_no": "0001193125-09-256940",
+      "form": "SC 13D",
+      "filing_date": "2009-12-21"
+    },
+    "AMAT_0001104659-24-020310": {
+      "id": "AMAT_0001104659-24-020310",
+      "ticker": "AMAT",
+      "accession_no": "0001104659-24-020310",
+      "form": "SC 13G",
+      "filing_date": "2024-02-13"
+    },
+    "LRCX_0000707549-26-000037": {
+      "id": "LRCX_0000707549-26-000037",
+      "ticker": "LRCX",
+      "accession_no": "0000707549-26-000037",
+      "form": "10-K",
+      "filing_date": "2026-08-07"
+    },
+    "LRCX_0000707549-26-000057": {
+      "id": "LRCX_0000707549-26-000057",
+      "ticker": "LRCX",
+      "accession_no": "0000707549-26-000057",
+      "form": "8-K",
+      "filing_date": "2026-11-05"
+    },
+    "LRCX_0000707549-26-000052": {
+      "id": "LRCX_0000707549-26-000052",
+      "ticker": "LRCX",
+      "accession_no": "0000707549-26-000052",
+      "form": "8-K",
+      "filing_date": "2026-10-21"
+    },
+    "LRCX_0000707549-26-000047": {
+      "id": "LRCX_0000707549-26-000047",
+      "ticker": "LRCX",
+      "accession_no": "0000707549-26-000047",
+      "form": "DEF 14A",
+      "filing_date": "2026-09-24"
+    },
+    "LRCX_0000929624-97-000382": {
+      "id": "LRCX_0000929624-97-000382",
+      "ticker": "LRCX",
+      "accession_no": "0000929624-97-000382",
+      "form": "SC 13D",
+      "filing_date": "1997-04-03"
+    },
+    "LRCX_0001104659-24-021318": {
+      "id": "LRCX_0001104659-24-021318",
+      "ticker": "LRCX",
+      "accession_no": "0001104659-24-021318",
+      "form": "SC 13G",
+      "filing_date": "2024-02-13"
+    },
+    "KLAC_0000319201-26-000027": {
+      "id": "KLAC_0000319201-26-000027",
+      "ticker": "KLAC",
+      "accession_no": "0000319201-26-000027",
+      "form": "10-K",
+      "filing_date": "2026-08-06"
+    },
+    "KLAC_0001193125-26-451824": {
+      "id": "KLAC_0001193125-26-451824",
+      "ticker": "KLAC",
+      "accession_no": "0001193125-26-451824",
+      "form": "8-K",
+      "filing_date": "2026-11-06"
+    },
+    "KLAC_0000319201-26-000032": {
+      "id": "KLAC_0000319201-26-000032",
+      "ticker": "KLAC",
+      "accession_no": "0000319201-26-000032",
+      "form": "8-K",
+      "filing_date": "2026-10-28"
+    },
+    "KLAC_0001193125-26-397898": {
+      "id": "KLAC_0001193125-26-397898",
+      "ticker": "KLAC",
+      "accession_no": "0001193125-26-397898",
+      "form": "DEF 14A",
+      "filing_date": "2026-09-22"
+    },
+    "KLAC_0000950134-07-000778": {
+      "id": "KLAC_0000950134-07-000778",
+      "ticker": "KLAC",
+      "accession_no": "0000950134-07-000778",
+      "form": "SC 13D",
+      "filing_date": "2007-01-18"
+    },
+    "KLAC_0000932471-24-000184": {
+      "id": "KLAC_0000932471-24-000184",
+      "ticker": "KLAC",
+      "accession_no": "0000932471-24-000184",
+      "form": "SC 13G",
+      "filing_date": "2024-10-04"
+    },
+    "COHR_0001193125-26-470356": {
+      "id": "COHR_0001193125-26-470356",
+      "ticker": "COHR",
+      "accession_no": "0001193125-26-470356",
+      "form": "8-K",
+      "filing_date": "2026-11-20"
+    },
+    "COHR_0001193125-26-467737": {
+      "id": "COHR_0001193125-26-467737",
+      "ticker": "COHR",
+      "accession_no": "0001193125-26-467737",
+      "form": "8-K",
+      "filing_date": "2026-11-19"
+    },
+    "COHR_0000820318-26-000020": {
+      "id": "COHR_0000820318-26-000020",
+      "ticker": "COHR",
+      "accession_no": "0000820318-26-000020",
+      "form": "10-K",
+      "filing_date": "2026-08-14"
+    },
+    "COHR_0001104659-26-114847": {
+      "id": "COHR_0001104659-26-114847",
+      "ticker": "COHR",
+      "accession_no": "0001104659-26-114847",
+      "form": "DEF 14A",
+      "filing_date": "2026-10-09"
+    },
+    "COHR_0001193125-24-062282": {
+      "id": "COHR_0001193125-24-062282",
+      "ticker": "COHR",
+      "accession_no": "0001193125-24-062282",
+      "form": "SC 13D",
+      "filing_date": "2024-03-07"
+    },
+    "COHR_0002012383-24-002611": {
+      "id": "COHR_0002012383-24-002611",
+      "ticker": "COHR",
+      "accession_no": "0002012383-24-002611",
+      "form": "SC 13G",
+      "filing_date": "2024-11-07"
+    },
+    "ALAB_0001628280-26-070258": {
+      "id": "ALAB_0001628280-26-070258",
+      "ticker": "ALAB",
+      "accession_no": "0001628280-26-070258",
+      "form": "8-K",
+      "filing_date": "2026-11-04"
+    },
+    "ALAB_0001736297-26-000010": {
+      "id": "ALAB_0001736297-26-000010",
+      "ticker": "ALAB",
+      "accession_no": "0001736297-26-000010",
+      "form": "10-K",
+      "filing_date": "2026-02-20"
+    },
+    "ALAB_0001736297-26-000044": {
+      "id": "ALAB_0001736297-26-000044",
+      "ticker": "ALAB",
+      "accession_no": "0001736297-26-000044",
+      "form": "8-K",
+      "filing_date": "2026-11-03"
+    },
+    "ALAB_0001140361-26-016359": {
+      "id": "ALAB_0001140361-26-016359",
+      "ticker": "ALAB",
+      "accession_no": "0001140361-26-016359",
+      "form": "DEF 14A",
+      "filing_date": "2026-04-23"
+    },
+    "ALAB_0001998053-24-000002": {
+      "id": "ALAB_0001998053-24-000002",
+      "ticker": "ALAB",
+      "accession_no": "0001998053-24-000002",
+      "form": "SC 13G",
+      "filing_date": "2024-11-19"
+    },
+    "DELL_0001193125-26-427920": {
+      "id": "DELL_0001193125-26-427920",
+      "ticker": "DELL",
+      "accession_no": "0001193125-26-427920",
+      "form": "8-K",
+      "filing_date": "2026-10-21"
+    },
+    "DELL_0001193125-26-391976": {
+      "id": "DELL_0001193125-26-391976",
+      "ticker": "DELL",
+      "accession_no": "0001193125-26-391976",
+      "form": "8-K",
+      "filing_date": "2026-09-15"
+    },
+    "DELL_0001571996-26-000008": {
+      "id": "DELL_0001571996-26-000008",
+      "ticker": "DELL",
+      "accession_no": "0001571996-26-000008",
+      "form": "10-K",
+      "filing_date": "2026-03-16"
+    },
+    "DELL_0001193125-26-226734": {
+      "id": "DELL_0001193125-26-226734",
+      "ticker": "DELL",
+      "accession_no": "0001193125-26-226734",
+      "form": "DEF 14A",
+      "filing_date": "2026-05-15"
+    },
+    "DELL_0001193125-24-177358": {
+      "id": "DELL_0001193125-24-177358",
+      "ticker": "DELL",
+      "accession_no": "0001193125-24-177358",
+      "form": "SC 13D",
+      "filing_date": "2024-07-10"
+    },
+    "DELL_0001123292-24-000339": {
+      "id": "DELL_0001123292-24-000339",
+      "ticker": "DELL",
+      "accession_no": "0001123292-24-000339",
+      "form": "SC 13G",
+      "filing_date": "2024-11-12"
+    },
+    "HPE_0001645590-26-000087": {
+      "id": "HPE_0001645590-26-000087",
+      "ticker": "HPE",
+      "accession_no": "0001645590-26-000087",
+      "form": "8-K",
+      "filing_date": "2026-11-04"
+    },
+    "HPE_0001645590-25-000130": {
+      "id": "HPE_0001645590-25-000130",
+      "ticker": "HPE",
+      "accession_no": "0001645590-25-000130",
+      "form": "10-K",
+      "filing_date": "2025-12-18"
+    },
+    "HPE_0001645590-26-000092": {
+      "id": "HPE_0001645590-26-000092",
+      "ticker": "HPE",
+      "accession_no": "0001645590-26-000092",
+      "form": "8-K",
+      "filing_date": "2026-11-18"
+    },
+    "HPE_0001645590-26-000019": {
+      "id": "HPE_0001645590-26-000019",
+      "ticker": "HPE",
+      "accession_no": "0001645590-26-000019",
+      "form": "DEF 14A",
+      "filing_date": "2026-02-11"
+    },
+    "HPE_0001104659-24-021117": {
+      "id": "HPE_0001104659-24-021117",
+      "ticker": "HPE",
+      "accession_no": "0001104659-24-021117",
+      "form": "SC 13G",
+      "filing_date": "2024-02-13"
+    },
+    "TECK_0000950142-11-000618": {
+      "id": "TECK_0000950142-11-000618",
+      "ticker": "TECK",
+      "accession_no": "0000950142-11-000618",
+      "form": "SC 13D",
+      "filing_date": "2011-03-25"
+    },
+    "TECK_0000950103-24-016111": {
+      "id": "TECK_0000950103-24-016111",
+      "ticker": "TECK",
+      "accession_no": "0000950103-24-016111",
+      "form": "SC 13G",
+      "filing_date": "2024-11-08"
+    },
+    "CCJ_0000315066-24-002644": {
+      "id": "CCJ_0000315066-24-002644",
+      "ticker": "CCJ",
+      "accession_no": "0000315066-24-002644",
+      "form": "SC 13G",
+      "filing_date": "2024-11-12"
+    },
+    "ENTG_0001101302-26-000012": {
+      "id": "ENTG_0001101302-26-000012",
+      "ticker": "ENTG",
+      "accession_no": "0001101302-26-000012",
+      "form": "10-K",
+      "filing_date": "2026-02-11"
+    },
+    "ENTG_0001140361-26-042892": {
+      "id": "ENTG_0001140361-26-042892",
+      "ticker": "ENTG",
+      "accession_no": "0001140361-26-042892",
+      "form": "8-K",
+      "filing_date": "2026-11-10"
+    },
+    "ENTG_0001101302-26-000159": {
+      "id": "ENTG_0001101302-26-000159",
+      "ticker": "ENTG",
+      "accession_no": "0001101302-26-000159",
+      "form": "8-K",
+      "filing_date": "2026-10-29"
+    },
+    "ENTG_0001101302-26-000054": {
+      "id": "ENTG_0001101302-26-000054",
+      "ticker": "ENTG",
+      "accession_no": "0001101302-26-000054",
+      "form": "DEF 14A",
+      "filing_date": "2026-03-23"
+    },
+    "ENTG_0001106191-16-000033": {
+      "id": "ENTG_0001106191-16-000033",
+      "ticker": "ENTG",
+      "accession_no": "0001106191-16-000033",
+      "form": "SC 13D",
+      "filing_date": "2016-10-11"
+    },
+    "ENTG_0000080255-24-001386": {
+      "id": "ENTG_0000080255-24-001386",
+      "ticker": "ENTG",
+      "accession_no": "0000080255-24-001386",
+      "form": "SC 13G",
+      "filing_date": "2024-11-14"
+    },
+    "LIN_0001193125-26-458288": {
+      "id": "LIN_0001193125-26-458288",
+      "ticker": "LIN",
+      "accession_no": "0001193125-26-458288",
+      "form": "8-K",
+      "filing_date": "2026-11-12"
+    },
+    "LIN_0001654954-26-009199": {
+      "id": "LIN_0001654954-26-009199",
+      "ticker": "LIN",
+      "accession_no": "0001654954-26-009199",
+      "form": "8-K",
+      "filing_date": "2026-10-29"
+    },
+    "LIN_0001628280-26-011430": {
+      "id": "LIN_0001628280-26-011430",
+      "ticker": "LIN",
+      "accession_no": "0001628280-26-011430",
+      "form": "10-K",
+      "filing_date": "2026-02-25"
+    },
+    "LIN_0001193125-26-192209": {
+      "id": "LIN_0001193125-26-192209",
+      "ticker": "LIN",
+      "accession_no": "0001193125-26-192209",
+      "form": "DEF 14A",
+      "filing_date": "2026-04-29"
+    },
+    "LIN_0002012383-24-000527": {
+      "id": "LIN_0002012383-24-000527",
+      "ticker": "LIN",
+      "accession_no": "0002012383-24-000527",
+      "form": "SC 13G",
+      "filing_date": "2024-10-18"
+    },
+    "PLAB_0001140361-26-023057": {
+      "id": "PLAB_0001140361-26-023057",
+      "ticker": "PLAB",
+      "accession_no": "0001140361-26-023057",
+      "form": "8-K",
+      "filing_date": "2026-05-28"
+    },
+    "PLAB_0001140361-25-045801": {
+      "id": "PLAB_0001140361-25-045801",
+      "ticker": "PLAB",
+      "accession_no": "0001140361-25-045801",
+      "form": "10-K",
+      "filing_date": "2025-12-17"
+    },
+    "PLAB_0000810136-26-000006": {
+      "id": "PLAB_0000810136-26-000006",
+      "ticker": "PLAB",
+      "accession_no": "0000810136-26-000006",
+      "form": "8-K",
+      "filing_date": "2026-08-26"
+    },
+    "PLAB_0001539497-26-000750": {
+      "id": "PLAB_0001539497-26-000750",
+      "ticker": "PLAB",
+      "accession_no": "0001539497-26-000750",
+      "form": "DEF 14A",
+      "filing_date": "2026-02-23"
+    },
+    "PLAB_0000929624-99-002129": {
+      "id": "PLAB_0000929624-99-002129",
+      "ticker": "PLAB",
+      "accession_no": "0000929624-99-002129",
+      "form": "SC 13D",
+      "filing_date": "1999-12-20"
+    },
+    "PLAB_0001104659-24-021712": {
+      "id": "PLAB_0001104659-24-021712",
+      "ticker": "PLAB",
+      "accession_no": "0001104659-24-021712",
+      "form": "SC 13G",
+      "filing_date": "2024-02-13"
+    }
+  }
+}

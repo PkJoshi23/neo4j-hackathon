@@ -1,0 +1,19 @@
+# Relate by Neo4j - embedded graph database (the app's source of truth)
+relate-db>=1.1.0
+
+# Frontend & Interactive Network Visualization
+streamlit>=1.35.0
+streamlit-agraph>=0.0.45
+
+# SEC EDGAR Ingestion & Data Sieve
+edgartools>=2.15.0
+
+# Local HuggingFace Embeddings ($0 API Spend)
+sentence-transformers>=2.6.0
+numpy>=1.24.0
+
+# LLM Endpoint & Config
+openai>=1.25.0
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+
