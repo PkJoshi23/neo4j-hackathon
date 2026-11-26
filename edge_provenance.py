@@ -7,7 +7,8 @@ filing text and reports, for every known company mentioned in it, whether the su
 language actually states a supply, customer or ownership relationship - including which way the
 relationship points, because "we depend on X" and "X is a customer" produce opposite edges.
 
-    python edge_provenance.py propose --tickers SNPS,GFS,TER --dry-run
+    python edge_provenance.py propose --tickers SNPS,GFS,TER         # print only
+    python edge_provenance.py propose --tickers SNPS,GFS,TER --apply --min-score 7
     python edge_provenance.py cite --tickers ASML,TSM          # attach evidence to existing edges
     python edge_provenance.py cite --all --forms 10-K,20-F,8-K  # press releases too
 
@@ -99,7 +100,10 @@ _OWNERSHIP = re.compile(
 # a sentence says both "partners with" and "we purchase from", the purchase is the sharper claim.
 _PARTNERSHIP = re.compile(
     r"\b(?:in (?:close |strategic )?partnership with|partnership with|"
-    r"partner(?:ed|ing|s)? (?:with|up with)|"
+    # "partners with" is refused on purpose: partners is a noun as often as a verb, and AMD's
+    # "Intel targets our customers and channel partners with special incentives" is competition
+    # described in partnership vocabulary. Past/progressive tense cannot be a noun.
+    r"partner(?:ed|ing) (?:with|up with)|"
     r"collaborat\w+ (?:with|on)|joint(?:ly)? (?:launch|develop|announce|offer)|"
     r"alliance with|memorandum of understanding|co-?develop\w*|"
     r"member(?:s)? of the .{0,40}(?:consortium|alliance|initiative))\b",
@@ -143,7 +147,10 @@ def _classify(paragraph: str) -> List[Dict[str, str]]:
     """(counterparty alias, direction) for every relationship this paragraph states."""
     out = []
     for alias, ticker in KNOWN_ALIASES.items():
-        if len(alias) < 4:
+        # Three characters is the floor, and _mentions still demands proper-noun casing there, so
+        # "AMD" and "Arm" count while "the long arm of the law" does not. The ANET press release
+        # names both in one sentence, and a four-character floor threw that evidence away.
+        if len(alias) < 3:
             continue
         # Test every sentence that names the company, not just the first: a filing introduces a
         # counterparty descriptively ("Cadence is an EDA vendor") before stating the relationship
@@ -266,6 +273,10 @@ def cmd_propose(graph, args):
         total += len(hits)
         if args.apply:
             for h in hits:
+                if h["score"] < args.min_score:
+                    print(f"    skipped {h['other']} ({h['pattern']}, score={h['score']} "
+                          f"< --min-score {args.min_score})")
+                    continue
                 if h["direction"] == "INBOUND":
                     src, tgt, rel = h["other"], h["filer"], "SUPPLIES_TO"
                 elif h["direction"] == "OUTBOUND":
@@ -284,6 +295,12 @@ def cmd_propose(graph, args):
                     print(f"    applied {src} -[{rel}]-> {tgt}")
     print(f"\ntotal evidenced relationships: {total} | edges written: {applied}"
           + ("" if args.apply else " (dry run - pass --apply to write)"))
+    if applied and not args.db:
+        # The tracked snapshot is what the app seeds from on a fresh machine, so an applied
+        # proposal that never reaches it exists only on this one. A scratch store must not write
+        # it - the file describes the default database, whatever file is open.
+        graph.export_json()
+        print(f"snapshot rewritten: {applied} edge(s) now in supply_chain.json")
 
 
 def cmd_cite(graph, args):
@@ -350,15 +367,29 @@ def cmd_cite(graph, args):
 
 
 def main():
+    # --db/--limit/--apply belong to the run, not the verb, so they are declared once and inherited
+    # by each subcommand. Argparse cannot share them between the top parser and a subparser (the
+    # subparser always writes its own default over a value given first), so the flags are moved
+    # after the verb when someone types them before it - the form every other script here uses.
+    flags = argparse.ArgumentParser(add_help=False)
+    flags.add_argument("--db", default=None, help="Relate file (defaults to the app's store)")
+    flags.add_argument("--limit", type=int, default=6, help="candidates printed per filer")
+    flags.add_argument("--apply", action="store_true", help="write to Relate (default is dry run)")
+
+    argv = list(sys.argv[1:])
+    verbs = {"propose", "cite"}
+    for i, token in enumerate(argv):
+        if token in verbs and i:
+            argv = argv[i:] + argv[:i]
+        elif token in verbs:
+            break
+
     parser = argparse.ArgumentParser(description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--db", default=None)
-    parser.add_argument("--limit", type=int, default=6)
-    parser.add_argument("--apply", action="store_true", help="write to Relate (default is dry run)")
     sub = parser.add_subparsers(dest="cmd", required=True)
-    p = sub.add_parser("propose", help="find evidenced edges for candidate tickers")
+    p = sub.add_parser("propose", parents=[flags], help="find evidenced edges for candidate tickers")
     p.add_argument("--tickers", required=True)
-    c = sub.add_parser("cite", help="attach evidence to existing edges lacking provenance")
+    c = sub.add_parser("cite", parents=[flags], help="attach evidence to existing edges lacking provenance")
     c.add_argument("--tickers", default="")
     c.add_argument("--all", action="store_true")
     for cmd in (p, c):
@@ -366,7 +397,10 @@ def main():
                          help="also read 8-K press releases, which name partners more often")
         cmd.add_argument("--forms", default="",
                          help="override the forms to read, e.g. --forms 10-K,8-K")
-    args = parser.parse_args()
+        cmd.add_argument("--min-score", type=int, default=0,
+                         help="propose prints every candidate but --apply writes only this many "
+                              "relationship signals; a score of 3 is one stray verb")
+    args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
     init_sec_identity()
