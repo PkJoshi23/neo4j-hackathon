@@ -30,8 +30,8 @@ from ingest import (
     KNOWN_ALIASES,
     _iter_paragraphs,
     _signal_score,
-    extract_form_text,
     init_sec_identity,
+    substantive_filings,
 )
 from relate_adapter import RelateSupplyChainGraph
 
@@ -159,15 +159,10 @@ def scan_filing(graph: RelateSupplyChainGraph, ticker: str,
     for form in forms:
         if form not in FORM_PROFILES or FORM_PROFILES[form].char_cap <= 0:
             continue
-        try:
-            filings = list(company.get_filings(form=form))[:1]
-        except Exception as exc:
-            print(f"{ticker:8} {form}: fetch failed ({str(exc)[:50]})")
-            continue
-        for filing in filings:
+        # One substantive annual report per form is the disclosure; older ones only restate it, and
+        # substantive_filings already steps past the amendment that pretends to be one.
+        for filing, raw in substantive_filings(company, form, FORM_PROFILES[form], limit=1):
             accession = str(filing.accession_number)
-            profile = FORM_PROFILES[form]
-            raw = extract_form_text(filing, profile)
             paragraphs = list(_iter_paragraphs(raw))
             if not paragraphs:
                 print(f"{ticker:8} {form} {accession}: no text extracted")
@@ -193,6 +188,8 @@ def scan_filing(graph: RelateSupplyChainGraph, ticker: str,
                         "as_of": str(filing.filing_date), "heading": heading,
                         "quote": hit["sentence"][:400], "score": score,
                     })
+            # One substantive annual report per form is the disclosure; older ones only restate it.
+            break
 
     dedup: Dict[tuple, Dict[str, Any]] = {}
     for hit in sorted(found, key=lambda h: -h["score"]):

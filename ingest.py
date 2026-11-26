@@ -648,19 +648,53 @@ def stake_from_filing(filing, company_cik, relate_graph: RelateSupplyChainGraph)
     }
 
 
+def substantive_filings(company, form: str, profile: FormProfile,
+                        limit: Optional[int] = None, min_chars: int = 500
+                        ) -> List[Tuple[Any, str]]:
+    """
+    Newest filings of this form that actually carry the document, as (filing, raw_text).
+
+    get_filings(form="10-K") also returns 10-K/A, and an amendment is a signature page or one
+    restated note rather than the annual report. AMD's newest "10-K" was a 10-K/A whose primary
+    document measured 34 characters ("TenK('ADVANCED MICRO DEVICES INC')" - edgartools' repr of an
+    empty filing). With filing_limit=1 that amendment became the company's only annual report,
+    produced zero chunks, and was then recorded as ingested, so no later run would look again.
+    Candidates are cheap metadata; the document behind each is fetched only while the slot is
+    still open, so a normal filer still costs exactly `limit` fetches.
+    """
+    wanted = limit if limit is not None else profile.filing_limit
+    picked: List[Tuple[Any, str]] = []
+    try:
+        candidates = list(company.get_filings(form=form))[: max(wanted * 3, wanted + 2)]
+    except Exception as exc:
+        logger.debug("No %s filings for %s (%s)", form, getattr(company, "ticker", "?"), exc)
+        return picked
+
+    for filing in candidates:
+        if len(picked) >= wanted:
+            break
+        if str(filing.form) != form:
+            logger.info("Skipping %s %s: amendment carries no full document",
+                        getattr(company, "ticker", "?"), filing.form)
+            continue
+        if profile.kind == "stake":
+            picked.append((filing, ""))
+            continue
+        raw_text = extract_form_text(filing, profile)
+        if len(raw_text) < min_chars:
+            logger.info("Skipping %s %s: %d characters of prose",
+                        getattr(company, "ticker", "?"), filing.form, len(raw_text))
+            continue
+        picked.append((filing, raw_text))
+    return picked
+
+
 def _collect_documents(company, company_cik, ticker: str, relate_graph: RelateSupplyChainGraph) -> List[Dict[str, Any]]:
     """Collects unprocessed filings across all configured forms, cheapest signal first."""
     documents: List[Dict[str, Any]] = []
 
     for form, profile in FORM_PROFILES.items():
-        try:
-            filings = company.get_filings(form=form)
-            candidates = list(filings)[: profile.filing_limit]
-        except Exception as exc:
-            logger.debug("No %s filings for %s (%s)", form, ticker, exc)
-            continue
-
-        for filing in candidates:
+        for filing, raw_text in substantive_filings(company, form, profile):
             accession_no = str(filing.accession_number)
             filing_key = f"{ticker}_{accession_no}"
             if relate_graph.check_filing_exists(filing_key):
@@ -679,7 +713,6 @@ def _collect_documents(company, company_cik, ticker: str, relate_graph: RelateSu
             if profile.kind == "stake":
                 document["stake"] = stake_from_filing(filing, company_cik, relate_graph)
             else:
-                raw_text = extract_form_text(filing, profile)
                 chunks = build_chunks(raw_text, profile.char_cap)
                 document["chunks"] = chunks
                 document["text"] = "\n\n".join(chunk["text"] for chunk in chunks)
@@ -688,6 +721,7 @@ def _collect_documents(company, company_cik, ticker: str, relate_graph: RelateSu
             documents.append(document)
 
     return documents
+
 
 
 EXTRACTION_PROMPT = """You are an expert Graph Information Extraction engine for an AI supply chain knowledge graph.

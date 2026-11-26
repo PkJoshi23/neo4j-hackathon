@@ -5,7 +5,9 @@ Ingestion skips any filing already recorded in Relate, so tickers registered bef
 embedding step worked have Filing nodes and no Chunk nodes: the analyst can name a supplier
 edge but can never show the paragraph that supports it. This re-reads exactly those filings
 from EDGAR (cache-first under .edgar_data), chunks them and embeds them with the local model,
-then writes (:Chunk)-[:ABOUT]->(:Company) behind the same indexes the app queries.
+then writes (:Chunk)-[:ABOUT]->(:Company) behind the same indexes the app queries. When a
+recorded annual report turns out to hold no document at all - an amendment filed under the same
+form name - it is re-pointed at the report that does, so the ticker stops reporting as pending.
 
 No LLM is imported, so this costs no DeepSeek tokens.
 
@@ -22,10 +24,19 @@ from typing import Dict, List
 from edgar import Company
 from sentence_transformers import SentenceTransformer
 
-from ingest import FORM_PROFILES, build_chunks, extract_form_text, init_sec_identity
+from ingest import (
+    FORM_PROFILES,
+    build_chunks,
+    extract_form_text,
+    init_sec_identity,
+    substantive_filings,
+)
 from relate_adapter import CHUNK_EMBEDDING_DIM, RelateSupplyChainGraph
 
 logger = logging.getLogger("backfill")
+
+# Below this the "filing" is edgartools' repr of an empty document, not a document.
+EMPTY_DOC_CHARS = 500
 
 
 def filings_without_chunks(graph: RelateSupplyChainGraph) -> Dict[str, List[Dict]]:
@@ -77,12 +88,33 @@ def backfill(graph: RelateSupplyChainGraph, model, pending: Dict[str, List[Dict]
         for filing_row in filings:
             profile = FORM_PROFILES[filing_row["form"]]
             filing = _match_filing(company, filing_row["form"], filing_row["accession_no"])
-            if filing is None:
-                print(f"{ticker:10} {filing_row['accession_no']} not reachable on EDGAR")
-                continue
-            chunks = build_chunks(extract_form_text(filing, profile), profile.char_cap)
+            raw = "" if filing is None else extract_form_text(filing, profile)
+            chunks = build_chunks(raw, profile.char_cap) if raw else []
+            accession_no, as_of = filing_row["accession_no"], filing_row["filing_date"]
+
+            if not chunks and profile.kind == "annual" and len(raw) < EMPTY_DOC_CHARS:
+                # The graph recorded an accession with no prose behind it - an annual-report
+                # amendment whose primary document is a signature page. Move the Filing node onto
+                # the report that does have text, or this ticker stays permanently unquotable.
+                alt = substantive_filings(company, filing_row["form"], profile, limit=1)
+                if not alt:
+                    print(f"{ticker:10} {accession_no} empty ({len(raw)} chars) and no substitute")
+                    continue
+                filing, raw = alt[0]
+                chunks = build_chunks(raw, profile.char_cap)
+                accession_no, as_of = str(filing.accession_number), str(filing.filing_date)
+                graph.record_filing(f"{ticker}_{accession_no}", ticker, accession_no,
+                                    filing_row["form"], as_of)
+                graph._rows(
+                    "MATCH (f:Filing {id: $id}) SET f.accession_no = $acc, f.filing_date = $d",
+                    {"id": f"{ticker}_{filing_row['accession_no']}", "acc": accession_no,
+                     "d": as_of},
+                )
+                print(f"{ticker:10} {filing_row['accession_no']} held no document "
+                      f"-> re-pointed at {accession_no}")
+
             if not chunks:
-                print(f"{ticker:10} {filing_row['accession_no']} no signal paragraphs matched")
+                print(f"{ticker:10} {accession_no} no signal paragraphs matched")
                 continue
 
             vectors = model.encode(
@@ -90,12 +122,12 @@ def backfill(graph: RelateSupplyChainGraph, model, pending: Dict[str, List[Dict]
             ).tolist()
             rows = [
                 {
-                    "id": f"{ticker}_{filing_row['accession_no']}_{chunk['fp']}",
+                    "id": f"{ticker}_{accession_no}_{chunk['fp']}",
                     "text": chunk["text"],
                     "ticker": ticker,
-                    "accession_no": filing_row["accession_no"],
+                    "accession_no": accession_no,
                     "form": filing_row["form"],
-                    "as_of": filing_row["filing_date"],
+                    "as_of": as_of,
                     "heading": chunk["heading"],
                     "fp": chunk["fp"],
                     "embedding": vector,
