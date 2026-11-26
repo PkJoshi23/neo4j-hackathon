@@ -1233,6 +1233,33 @@ def main():
                 render_ego_network(relate_graph, focus_ticker, hops, show_components, height=620)
             render_query_log(relate_graph)
 
+            st.markdown("#### 🧱 Layer Concentration")
+            layer_rows = relate_graph.get_layer_map()
+            if layer_rows:
+                st.dataframe(
+                    [
+                        {
+                            "Layer": row["layer"],
+                            "Companies": row["members"],
+                            "Suppliers": row["suppliers_with_edges"],
+                            "Buyer links": row["supply_edges"],
+                            "Largest supplier": row["top_supplier"],
+                            "Its buyers": row["top_supplier_buyers"],
+                            "Load share": f"{int(row['load_share'] * 100)}%",
+                            "Cited by a filing": f"{row['evidence_pct']:.0f}%",
+                        }
+                        for row in layer_rows
+                    ],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+                st.caption(
+                    "Load share is the fraction of that layer's buyer relationships carried by "
+                    "its single largest supplier: 80%+ means one company, not a competitive "
+                    "layer. The last column is honesty - how much of the layer is quoted from a "
+                    "filing rather than curated by hand."
+                )
+
         with tab_chat:
             st.subheader("💬 Supply Chain Agent & GraphRAG Analyst (Full Width)")
             st.caption(

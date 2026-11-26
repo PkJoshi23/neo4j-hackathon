@@ -439,7 +439,7 @@ class RelateSupplyChainGraph:
             return False
 
         edge_props = {}
-        for key in ("notes", "source_form", "accession_no", "as_of", "stake_pct"):
+        for key in ("notes", "source_form", "accession_no", "as_of", "stake_pct", "evidence"):
             if props.get(key) is not None:
                 edge_props[key] = props[key]
 
@@ -802,7 +802,8 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
             edges = self._rows(
                 "MATCH (a:Company)-[r]->(b:Company) RETURN a.id AS source, b.id AS target, "
                 "type(r) AS type, r.notes AS notes, r.source_form AS source_form, "
-                "r.accession_no AS accession_no, r.as_of AS as_of, r.stake_pct AS stake_pct"
+                "r.accession_no AS accession_no, r.as_of AS as_of, r.stake_pct AS stake_pct, "
+                "r.evidence AS evidence"
             )
             payload = {
                 "nodes": {row["id"]: row for row in nodes},
@@ -857,7 +858,7 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
             if rel not in RELATION_TYPES:
                 continue
             props = {key: edge.get(key) for key in
-                     ("notes", "source_form", "accession_no", "as_of", "stake_pct")
+                     ("notes", "source_form", "accession_no", "as_of", "stake_pct", "evidence")
                      if edge.get(key) is not None}
             set_clause = ""
             params = {"src": edge["source"], "tgt": edge["target"]}
