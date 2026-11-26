@@ -21,6 +21,7 @@ import sys
 import types
 import re
 import json
+import hashlib
 import asyncio
 import logging
 from pathlib import Path
@@ -62,7 +63,16 @@ DEFAULT_EDGAR_IDENTITY = "SupplyChainBot admin@stockassistant.ai"
 MAX_FILTERED_CHARS = 12_000   # per document
 MAX_TOTAL_CHARS = 28_000      # per ingestion run (all documents)
 MIN_SIGNAL_CHARS = 400        # below this a document is not worth an LLM call
-MAX_PARAGRAPHS_EMBEDDED = 10  # chunks stored per filing for GraphRAG
+CHUNKS_PER_FILING = 8         # excerpts stored per filing for GraphRAG
+CHUNK_MIN_CHARS = 200         # shorter than this is a caption, not evidence
+CHUNK_MAX_CHARS = 1400        # ~350 tokens: past this bge-small dilutes the signal
+# Foreign filings (20-F/6-K) arrive hard-wrapped: TSM's 20-F split into 1091 blocks with a
+# median length of 115 characters, so the paragraph floor matched three of them and the graph's
+# only foundry node got a single excerpt. A document where this share of blocks is short is
+# treated as wrapped text and its lines are reflowed before paragraphing.
+WRAPPED_DOC_SHARE = 0.75
+WRAPPED_BLOCK_CHARS = 180
+REFLOW_PARAGRAPH_CHARS = 500  # flush a reflowed paragraph once a sentence ends past this
 LLM_CONCURRENCY = 3           # parallel extraction calls
 
 # Canonical ticker mapping for entity resolution
@@ -186,6 +196,37 @@ SUPPLY_SIEVE = re.compile("|".join(SUPPLY_CHAIN_KEYWORDS), re.IGNORECASE)
 OWNERSHIP_SIEVE = re.compile("|".join(OWNERSHIP_KEYWORDS), re.IGNORECASE)
 ANY_SIEVE = re.compile("|".join(SUPPLY_CHAIN_KEYWORDS + OWNERSHIP_KEYWORDS), re.IGNORECASE)
 
+# Kept compiled and separate so a paragraph scores once per keyword GROUP rather than once
+# per occurrence; otherwise a risk factor that says "customers" fourteen times outscores one
+# that actually names a supplier.
+_SUPPLY_PATTERNS = [re.compile(p, re.IGNORECASE) for p in SUPPLY_CHAIN_KEYWORDS]
+_OWNERSHIP_PATTERNS = [re.compile(p, re.IGNORECASE) for p in OWNERSHIP_KEYWORDS]
+_ALIAS_LIST = sorted({alias for alias, ticker in KNOWN_ALIASES.items() if len(alias) > 3})
+_QUANTIFIED = re.compile(r"\b\d{1,3}(?:,\d{3})+\b|\b\d+(?:\.\d+)?%|\$\s?\d")
+# '--- Item 1A ---' markers written by extract_filing_sections.
+_SECTION_MARK = re.compile(r"\n?\s*-{3,}\s*(.+?)\s*-{3,}\s*(?:\n|$)")
+# Split only where a terminator is followed by whitespace and a capital/digit/quote, so
+# "10% of revenue." and "U.S. sales" do not break a sentence in half.
+_SENTENCE_RE = re.compile(r"(?<=[.!?])\s+(?=[\"'(\[]?[A-Z0-9$])")
+_INLINE_HEAD = re.compile(r"^(?:Item|Part)\s+(?:[0-9]+[A-Za-z]?|[IVX]+)[.:]?\s*(?:\S.*)?$", re.IGNORECASE)
+# End of a sentence, allowing a trailing closing quote or bracket.
+_TERM_SENT = re.compile(r"[.!?][\"')\]]*\s*$")
+# Safe-harbor recitals and 8-K exhibit indexes name counterparties and keywords without claiming
+# anything about them ("Certain statements in this press release... supplier relationships"), so
+# they win the keyword sieve and rank ahead of the disclosure that actually matters.
+_RECITAL = re.compile(
+    r"certain statements in this|includes? (?:but is not limited to|statements as to)|"
+    r"forward[- ]looking statements? (?:regarding|are based|contained)|"
+    r"actual results may (?:differ|vary)|should not be construed|"
+    r"expressly qualified by|cautionary statements|"
+    r"principal (?:executive )?office|telephone number|facsimile|"
+    r"title of each class|trading symbol|name of each exchange|par value per share|"
+    r"^\s*(?:\(d\)\s*)?exhibits?\b|item 9\.01\b|incorporated by reference|"
+    r"pursuant to the requirements of the securit|intentionally left blank|"
+    r"signature[s]?\b",
+    re.IGNORECASE | re.MULTILINE,
+)
+
 
 class FormProfile(NamedTuple):
     """How much and how deep to read one form type."""
@@ -244,49 +285,177 @@ def extract_filing_sections(filing_obj, form: str) -> str:
     return extracted_text
 
 
-def select_relevant_paragraphs(raw_text: str, char_cap: int) -> List[str]:
+def _clip_to_sentence(text: str, limit: int) -> str:
     """
-    Zero-token pre-filter.
+    Trim to whole sentences. A hard ``text[:n]`` cut can turn "we do not depend on a single
+    supplier" into a stored excerpt that reads as the opposite, and the agent quotes excerpts
+    verbatim.
+    """
+    if len(text) <= limit:
+        return text
+    kept: List[str] = []
+    used = 0
+    for sentence in _SENTENCE_RE.split(text):
+        sentence = sentence.strip()
+        if not sentence:
+            continue
+        if kept and used + len(sentence) + 1 > limit:
+            break
+        if not kept and len(sentence) > limit:
+            # One sentence longer than the whole budget: cut at the last clause boundary.
+            head = sentence[:limit]
+            cut = max(head.rfind("; "), head.rfind(", "), head.rfind(" "))
+            kept.append(head[:cut + 1].rstrip(" ,;"))
+            break
+        kept.append(sentence)
+        used += len(sentence) + 1
+        if used >= limit:
+            break
+    return " ".join(kept).strip() or text[:limit].rsplit(" ", 1)[0]
 
-    Keeps paragraphs carrying a supply-chain or ownership signal, hard-capped at
-    ``char_cap``. Flattened documents (8-K HTML is often one long line) fall back to
-    windows around each keyword hit so the signal is not lost to whitespace.
+
+def _fingerprint(text: str) -> str:
+    return hashlib.sha1(re.sub(r"\W+", " ", text.lower()).strip().encode("utf-8")).hexdigest()[:16]
+
+
+def _signal_score(text: str) -> int:
+    """Distinct keyword groups + named counterparties + quantified claims, minus boilerplate."""
+    supply = sum(1 for pat in _SUPPLY_PATTERNS if pat.search(text))
+    ownership = sum(1 for pat in _OWNERSHIP_PATTERNS if pat.search(text))
+    named = sum(1 for alias in _ALIAS_LIST if alias in text.lower())
+    quantified = len(_QUANTIFIED.findall(text))
+    # Measured on 225 ingested chunks: recitals scored 6-8, real disclosure 17-32, so one
+    # penalty clears the former without touching the latter.
+    recital = min(len(_RECITAL.findall(text)), 2)
+    return supply * 3 + ownership * 3 + min(named, 4) * 2 + min(quantified, 4) - recital * 12
+
+
+def _body_paragraphs(heading: str, body: str):
+    """
+    Yield (heading, paragraph); a short leading 'Item 1A. Risk Factors' line re-declares it.
+
+    Some filings separate every wrapped line with a blank line instead of every paragraph. When
+    most blocks in a section are one line long the lines are reflowed into paragraph-sized runs,
+    otherwise the whole document collapses into captions and nothing is retrievable.
+    """
+    blocks = []
+    for block in re.split(r"\n\s*\n", body):
+        cleaned = re.sub(r"\s+", " ", block).strip()
+        if cleaned:
+            blocks.append(cleaned)
+    if not blocks:
+        return
+    wrapped = (sum(1 for b in blocks if len(b) < WRAPPED_BLOCK_CHARS)
+               >= WRAPPED_DOC_SHARE * len(blocks))
+
+    current = heading
+    para = ""
+    for cleaned in blocks:
+        if len(cleaned) <= 130 and _INLINE_HEAD.match(cleaned):
+            if para:
+                yield current, para
+                para = ""
+            current = cleaned.rstrip(": .-").strip()
+            continue
+        para = f"{para} {cleaned}" if para else cleaned
+        if not wrapped:
+            yield current, para
+            para = ""
+            continue
+        if len(para) >= CHUNK_MAX_CHARS or (len(para) >= REFLOW_PARAGRAPH_CHARS
+                                            and _TERM_SENT.search(para)):
+            yield current, para
+            para = ""
+    if para:
+        yield current, para
+
+
+def _iter_paragraphs(raw_text: str):
+    """
+    Walk the document as (heading, paragraph). extract_filing_sections brackets each Item with
+    '--- Item 1A ---'; inheriting that label down the document is what lets an excerpt say
+    which section it came from instead of floating free.
+    """
+    heading = ""
+    pos = 0
+    for mark in _SECTION_MARK.finditer(raw_text):
+        yield from _body_paragraphs(heading, raw_text[pos:mark.start()])
+        heading = mark.group(1).strip().rstrip(": .-").strip()
+        pos = mark.end()
+    yield from _body_paragraphs(heading, raw_text[pos:])
+
+
+def _keyword_windows(raw_text: str, char_cap: int) -> List[Dict[str, Any]]:
+    """
+    Fallback for flattened documents (8-K HTML often arrives as one long line, so blank-line
+    splitting yields nothing). Windows are sentence-bounded and de-overlapped, instead of a
+    fixed +/-400 character slice that cuts mid-clause and repeats itself.
+    """
+    out: List[Dict[str, Any]] = []
+    seen: set = set()
+    used = 0
+    for match in list(ANY_SIEVE.finditer(raw_text))[:60]:
+        start = max(0, match.start() - 500)
+        end = min(len(raw_text), match.end() + 500)
+        window = _clip_to_sentence(re.sub(r"\s+", " ", raw_text[start:end]).strip(), CHUNK_MAX_CHARS)
+        if len(window) < CHUNK_MIN_CHARS:
+            continue
+        prefix = _fingerprint(" ".join(window.split()[:18]))
+        if prefix in seen:
+            continue
+        score = _signal_score(window)
+        if score <= 0:
+            continue
+        seen.add(prefix)
+        out.append({"text": window, "fp": _fingerprint(window), "score": score, "heading": ""})
+        used += len(window)
+        if used >= char_cap:
+            break
+    return out
+
+
+def build_chunks(raw_text: str, char_cap: int = MAX_FILTERED_CHARS) -> List[Dict[str, Any]]:
+    """
+    Chunking for GraphRAG: heading-prefixed, sentence-bounded, signal-ranked excerpts with
+    duplicates dropped.
+
+    The previous selector walked the document in order and kept anything matching one keyword
+    until the character cap was spent, so Item 1 boilerplate consumed the budget, mid-document
+    disclosures were cut off, and the same risk factor reappeared for every fiscal year.
     """
     if not raw_text:
         return []
 
-    retained: List[str] = []
-    total = 0
-
-    for chunk in re.split(r"\n\s*\n", raw_text):
-        cleaned = re.sub(r"\s+", " ", chunk).strip()
-        if len(cleaned) < 120 or not ANY_SIEVE.search(cleaned):
+    candidates: List[Dict[str, Any]] = []
+    seen: set = set()
+    for heading, body in _iter_paragraphs(raw_text):
+        if len(body) < CHUNK_MIN_CHARS or not ANY_SIEVE.search(body):
             continue
-        if total + len(cleaned) > char_cap:
-            remaining = char_cap - total
-            if remaining > 150:
-                retained.append(cleaned[:remaining])
-            break
-        retained.append(cleaned)
-        total += len(cleaned)
-
-    if total >= 300:
-        return retained
-
-    # Flattened text: take windows around keyword hits instead.
-    windows: List[str] = []
-    total = 0
-    for match in ANY_SIEVE.finditer(raw_text):
-        start = max(0, match.start() - 400)
-        end = min(len(raw_text), match.end() + 400)
-        window = re.sub(r"\s+", " ", raw_text[start:end]).strip()
-        if not window:
+        text = _clip_to_sentence(f"{heading}: {body}" if heading else body, CHUNK_MAX_CHARS)
+        # Fingerprint the body, not the stored text: the same risk factor reappears under both
+        # Item 1 and Item 1A, and a heading-relative fingerprint lets it occupy two slots.
+        fp = _fingerprint(body)
+        if fp in seen:
             continue
-        if total + len(window) > char_cap:
-            break
-        windows.append(window)
-        total += len(window)
-    return windows
+        score = _signal_score(body)
+        if score <= 0:
+            continue
+        seen.add(fp)
+        candidates.append({"text": text, "fp": fp, "score": score, "heading": heading})
+
+    if not candidates:
+        candidates = _keyword_windows(raw_text, char_cap)
+
+    candidates.sort(key=lambda item: (-item["score"], item["fp"]))
+
+    selected: List[Dict[str, Any]] = []
+    used = 0
+    for item in candidates:
+        if len(selected) >= CHUNKS_PER_FILING or used + len(item["text"]) > char_cap:
+            continue
+        selected.append(item)
+        used += len(item["text"])
+    return selected
 
 
 EXHIBIT_CHAR_LIMIT = 20_000   # raw cap per exhibit before sieving
@@ -459,7 +628,7 @@ def _collect_documents(company, company_cik, ticker: str, relate_graph: RelateSu
                 "accession_no": accession_no,
                 "as_of": str(filing.filing_date),
                 "profile": profile,
-                "paragraphs": [],
+                "chunks": [],
                 "text": "",
                 "stake": None,
             }
@@ -468,9 +637,9 @@ def _collect_documents(company, company_cik, ticker: str, relate_graph: RelateSu
                 document["stake"] = stake_from_filing(filing, company_cik, relate_graph)
             else:
                 raw_text = extract_form_text(filing, profile)
-                paragraphs = select_relevant_paragraphs(raw_text, profile.char_cap)
-                document["paragraphs"] = paragraphs
-                document["text"] = "\n\n".join(paragraphs)
+                chunks = build_chunks(raw_text, profile.char_cap)
+                document["chunks"] = chunks
+                document["text"] = "\n\n".join(chunk["text"] for chunk in chunks)
                 document["raw_chars"] = len(raw_text)
 
             documents.append(document)
@@ -611,31 +780,42 @@ def _apply_extraction(data: Dict[str, Any], focus_ticker: str, document: Dict[st
 
 def _store_chunks(relate_graph: RelateSupplyChainGraph, ticker: str, document: Dict[str, Any], embedder) -> int:
     """Embeds the retained excerpts for GraphRAG retrieval (local model, no API cost)."""
-    paragraphs = document.get("paragraphs") or []
-    if not paragraphs or embedder is None:
+    chunks = document.get("chunks") or []
+    if not chunks or embedder is None:
         return 0
 
-    paragraphs = paragraphs[:MAX_PARAGRAPHS_EMBEDDED]
+    # A risk factor filed unchanged in FY2024 and FY2025 would otherwise take two of the eight
+    # slots and hand the model the same paragraph twice.
+    known = relate_graph.chunk_fingerprints(ticker)
+    fresh = [chunk for chunk in chunks if chunk["fp"] not in known]
+    if not fresh:
+        return 0
+
+    texts = [chunk["text"] for chunk in fresh]
     try:
         if hasattr(embedder, "embed_documents"):
-            embeddings = embedder.embed_documents(paragraphs)
+            embeddings = embedder.embed_documents(texts)
         elif hasattr(embedder, "encode"):
-            embeddings = embedder.encode(paragraphs).tolist()
+            embeddings = embedder.encode(texts).tolist()
         else:
-            embeddings = [embedder.embed_query(p) for p in paragraphs]
+            embeddings = [embedder.embed_query(text) for text in texts]
     except Exception as exc:
         logger.warning("Embedding failed for %s %s: %s", document["form"], document["accession_no"], exc)
         return 0
 
     rows = [
         {
-            "id": f"{ticker}_{document['accession_no']}_{index}",
-            "text": text,
+            "id": f"{ticker}_{document['accession_no']}_{chunk['fp']}",
+            "text": chunk["text"],
             "ticker": ticker,
             "accession_no": document["accession_no"],
+            "form": document.get("form"),
+            "as_of": document.get("as_of"),
+            "heading": chunk.get("heading") or "",
+            "fp": chunk["fp"],
             "embedding": embedding,
         }
-        for index, (text, embedding) in enumerate(zip(paragraphs, embeddings))
+        for chunk, embedding in zip(fresh, embeddings)
     ]
     # one UNWIND statement for the whole filing, instead of one rewrite per excerpt
     return relate_graph.save_chunks(rows)

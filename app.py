@@ -1020,8 +1020,10 @@ def _render_graphrag_chat(relate_graph, embedder, llm):
                 audit_lines = []
                 for idx, ch in enumerate(retrieved_chunks):
                     text = ch.get("text", "")
-                    sec_lines.append(f"Excerpt {idx+1} ({ch.get('ticker')}, Form {ch.get('accession_no')}):\n{text}")
-                    audit_lines.append(f"**SEC Filing Excerpt {idx+1} ({ch.get('ticker')}):**\n> {text}\n")
+                    label = " / ".join(str(part) for part in (
+                        ch.get("ticker"), ch.get("form"), ch.get("as_of")) if part) or "unknown issuer"
+                    sec_lines.append(f"Excerpt {idx+1} ({label}, accession {ch.get('accession_no')}):\n{text}")
+                    audit_lines.append(f"**SEC Filing Excerpt {idx+1} ({label}):**\n> {text}\n")
 
                 sec_context_str = "\n\n".join(sec_lines) if sec_lines else "No specific filing excerpt matched."
 

@@ -212,6 +212,9 @@ class SupplyChainAgent:
             {
                 "ticker": hit.get("ticker"),
                 "accession_no": hit.get("accession_no"),
+                "form": hit.get("form"),
+                "filed": hit.get("as_of"),
+                "heading": hit.get("heading"),
                 "rrf": round(float(hit.get("rrf") or 0.0), 5),
                 "found_by": "vector+fulltext" if hit.get("lists", 0) > 1 else (
                     "fulltext" if hit.get("v_rank") is None else "vector"),
@@ -359,6 +362,9 @@ class SupplyChainAgent:
                         citations.append({
                             "ticker": row.get("ticker"),
                             "accession_no": row.get("accession_no"),
+                            "form": row.get("form"),
+                            "filed": row.get("filed"),
+                            "heading": row.get("heading"),
                             "excerpt": (row.get("excerpt") or "")[:200],
                         })
 

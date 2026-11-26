@@ -11,6 +11,7 @@ records each query, which powers the "Queries executed" panel in the UI.
 """
 
 import atexit
+import hashlib
 import json
 import logging
 import os
@@ -467,9 +468,11 @@ class RelateSupplyChainGraph:
 
     def _migrate_legacy_chunks(self) -> int:
         """
-        Move the old supply_chain_chunks.json sidecar into Relate once. The file is only set
-        aside after the graph confirms it holds every chunk, so a failed write can never
-        discard the sidecar.
+        Move the old supply_chain_chunks.json sidecar into Relate once, and leave the file in
+        place. The sidecar path is global while stores are per-path, so a scratch database can
+        open it; renaming it as a side effect would remove the only copy of chunks that store
+        never received. Re-running is cheap - the skip below and MERGE on chunk id make it
+        idempotent - so the file is kept until it is deliberately retired.
         """
         if not os.path.exists(self.chunks_file):
             return 0
@@ -492,9 +495,8 @@ class RelateSupplyChainGraph:
             logger.warning("Migration incomplete (%d of %d chunks in Relate); keeping %s",
                            self.chunk_count(), len(legacy), self.chunks_file)
             return written
-        os.replace(self.chunks_file, self.chunks_file + ".migrated")
-        logger.info("Migrated %d chunks into Relate; sidecar kept as %s.",
-                    written, self.chunks_file + ".migrated")
+        logger.info("Migrated %d chunks into Relate; %s left in place as a backup.",
+                    written, self.chunks_file)
         return written
 
     def chunk_count(self) -> int:
@@ -519,6 +521,12 @@ class RelateSupplyChainGraph:
                 "text": chunk["text"],
                 "ticker": (chunk.get("ticker") or "").upper(),
                 "accession_no": chunk.get("accession_no"),
+                "form": chunk.get("form"),
+                "as_of": chunk.get("as_of"),
+                "heading": chunk.get("heading") or "",
+                "fp": chunk.get("fp") or hashlib.sha1(
+                    re.sub(r"\W+", " ", chunk["text"].lower()).strip().encode("utf-8")
+                ).hexdigest()[:16],
                 "e": [float(v) for v in vector],
             })
         if not rows:
@@ -533,11 +541,17 @@ class RelateSupplyChainGraph:
             "UNWIND $rows AS r "
             "MERGE (c:Chunk {id: r.id}) "
             "SET c.text = r.text, c.ticker = r.ticker, c.accession_no = r.accession_no, "
+            "c.form = r.form, c.as_of = r.as_of, c.heading = r.heading, c.fp = r.fp, "
             "c.embedding = vector(r.e, $dim, FLOAT32) "
             "WITH c MATCH (co:Company {id: c.ticker}) MERGE (c)-[:ABOUT]->(co)",
             {"rows": rows, "dim": CHUNK_EMBEDDING_DIM},
         )
         return len(rows)
+
+    def chunk_fingerprints(self, ticker: str) -> set:
+        """Text fingerprints already stored for a ticker, so re-ingest adds only what is new."""
+        rows = self._rows("MATCH (c:Chunk {ticker: $t}) RETURN c.fp AS fp", {"t": (ticker or "").upper()})
+        return {row["fp"] for row in rows if row.get("fp")}
 
     @staticmethod
     def _fulltext_query(query_text: str) -> str:
@@ -579,6 +593,7 @@ WITH cs[i] AS c, i + 1 AS rank
 ORDER BY rank LIMIT $k
 OPTIONAL MATCH (c)-[:ABOUT]->(co:Company)
 RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accession_no,
+       c.form AS form, c.as_of AS as_of, c.heading AS heading,
        1.0 / ($rrf + rank) AS rrf, 1 AS lists, null AS v_rank, rank AS f_rank, collect(co.tier) AS tiers
 """
         else:
@@ -610,6 +625,7 @@ WITH c, rrf, lists, v_rank, f_rank, collect(co.tier) AS tiers
 ORDER BY rrf DESC, lists DESC, coalesce(f_rank, 999) ASC, coalesce(v_rank, 999) ASC, c.id
 LIMIT $k
 RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accession_no,
+       c.form AS form, c.as_of AS as_of, c.heading AS heading,
        rrf, lists, v_rank, f_rank, tiers
 """
         if not self.chunk_count():
@@ -1094,6 +1110,9 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
                 "text": hit["text"],
                 "ticker": hit["ticker"],
                 "accession_no": hit["accession_no"],
+                "form": hit.get("form"),
+                "as_of": hit.get("as_of"),
+                "heading": hit.get("heading"),
                 "rrf": round(float(hit.get("rrf") or 0.0), 5),
                 "in_vector": hit.get("v_rank"),
                 "in_fulltext": hit.get("f_rank"),
