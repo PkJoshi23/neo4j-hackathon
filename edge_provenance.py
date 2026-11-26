@@ -9,10 +9,16 @@ relationship points, because "we depend on X" and "X is a customer" produce oppo
 
     python edge_provenance.py propose --tickers SNPS,GFS,TER --dry-run
     python edge_provenance.py cite --tickers ASML,TSM          # attach evidence to existing edges
-    python edge_provenance.py cite --all                        # everything lacking provenance
+    python edge_provenance.py cite --all --forms 10-K,20-F,8-K  # press releases too
 
 Direction is decided by the filer's wording, never guessed: a chunk that names a company without
 using a relationship verb is reported as ambiguous and left unapplied.
+
+What this measured on the graph as it stands: 4 of 32 uncited edges could be attributed from annual
+reports, and adding 8-Ks changed nothing, because the missing sentences genuinely do not exist. ASML's
+538,579-character 20-F contains the string "TSMC" zero times and TSMC's 20-F never says "ASML" - the
+two companies whose relationship defines the AI supply chain each write "our largest customer" rather
+than a name. An edge this script cannot cite is an analyst's inference, and the graph says so.
 """
 
 import argparse
@@ -39,6 +45,11 @@ logger = logging.getLogger("provenance")
 
 PROSE_FORMS = ("10-K", "20-F")
 
+# An 8-K is mostly the press release, and press releases name the partner ("Micron begins volume
+# shipment of HBM3E to NVIDIA") in a way the 10-K never does: risk sections anonymize counterparties
+# as "Customer A" precisely because procurement is competitively sensitive. Worth reading.
+EVENT_FORMS = ("8-K",)
+
 # Which way the arrow goes depends on who is doing the depending.
 _SUPPLIER_SIDE = re.compile(
     r"\b(?:"
@@ -56,9 +67,12 @@ _SUPPLIER_SIDE = re.compile(
 _CUSTOMER_SIDE = re.compile(
     r"\b(?:our (?:largest|top|significant) customers?|customers? (?:accounted for|represent|"
     r"constitute|include|such as|that include)|customer concentration|"
-    r"accounted for\b[^.]{0,90}\brevenue\b|revenue\b[^.]{0,60}accounted for|"
+    # The gap is bounded by the sentence, not by periods: "accounted for 28.8% of our revenue" has
+    # a decimal point in it, and [^.]{0,90} silently refused every percentage a filing disclosed.
+    r"accounted for\b.{0,90}?\brevenue\b|revenue\b.{0,60}?accounted for|"
     r"one customer(?:'s)? (?:revenue|account)|we sell(?:ing)? (?:to|our products to)|"
-    r"shipments to|design wins? (?:from|with)|our products (?:are )?used by|"
+    r"shipments to|design wins? (?:from|with|at)|"
+    r"our (?:\S+ ){0,3}products? (?:are )?(?:used|deployed|integrated|adopted)(?: by| in| across)|"
     r"we (?:ship|delivered) (?:to|products to))\b",
     re.IGNORECASE,
 )
@@ -66,7 +80,9 @@ _CUSTOMER_SIDE = re.compile(
 # "generated 12% of our revenue from licensing arrangements with". Recorded as SUPPLIES_TO with
 # the sentence kept as the note, so the arrow carries the quote and the nuance is not lost.
 _LICENSE_SIDE = re.compile(
-    r"\b(?:licens(?:e|es|ed|ing|ing arrangements?|or)s?\b[^.]{0,90}(?:revenue|royalt|use)|"
+    r"\b(?:licens(?:e|es|ed|ing|ing arrangements?|or)s?\b.{0,90}?(?:revenue|royalt|use)|"
+    # Filings usually write it the other way round: "revenue from licensing arrangements with X".
+    r"(?:revenue|royalt\w+) (?:from|under|through|attributable to) .{0,50}?licens\w*|"
     r"design (?:wins?|partners?) with|ip (?:licens|agreement)s? with|"
     r"our (?:design|technology) (?:is )?(?:used|licensed) by)\b",
     re.IGNORECASE,
@@ -77,15 +93,29 @@ _OWNERSHIP = re.compile(
     r"we (?:hold|own) (?:a |an))\b",
     re.IGNORECASE,
 )
-# A competitor list names the same companies a supply relationship does, in the same document,
-# and it is the single most common false edge: "Key competitors include TSMC, UMC" must never
-# become an arrow between them.
-_COMPETITION = re.compile(
-    r"\b(?:key |main |principal |significant )?competitors? (?:include|are|with)|"
-    r"we compete with|competitive landscape|competitor\b",
+# Consortium and collaboration announcements are the one relationship type 8-K press releases state
+# plainly ("In partnership with AMD, Arm, Broadcom ... Arista launched"), and there was no pattern
+# for it, so sentences naming six companies were thrown away. Deliberately last in the ladder: when
+# a sentence says both "partners with" and "we purchase from", the purchase is the sharper claim.
+_PARTNERSHIP = re.compile(
+    r"\b(?:in (?:close |strategic )?partnership with|partnership with|"
+    r"partner(?:ed|ing|s)? (?:with|up with)|"
+    r"collaborat\w+ (?:with|on)|joint(?:ly)? (?:launch|develop|announce|offer)|"
+    r"alliance with|memorandum of understanding|co-?develop\w*|"
+    r"member(?:s)? of the .{0,40}(?:consortium|alliance|initiative))\b",
     re.IGNORECASE,
 )
-_SENTENCE_SPLIT = re.compile(r"(?<=[.!?])\s+")
+# A competitor list names the same companies a supply relationship does, in the same document,
+# and it is the single most common false edge: "Key competitors include TSMC, UMC" must never
+# become an arrow between them. Every compet* form counts, not just the present tense.
+_COMPETITION = re.compile(
+    r"\b(?:key |main |principal |significant )?competitors? (?:include|are|with)|"
+    r"compet\w+ (?:with|against)|competitive landscape|competitor\b",
+    re.IGNORECASE,
+)
+# Semicolons and colons join independent clauses, and one clause's competitor must not taint the
+# next clause's joint venture - or vice versa.
+_SENTENCE_SPLIT = re.compile(r"(?<=[.!?;:])\s+")
 
 _RELATION_HINT = re.compile(
     r"supplier|supply|customer|revenue|licens|royalt|stake|acquir|depend|outsourc|"
@@ -129,6 +159,7 @@ def _classify(paragraph: str) -> List[Dict[str, str]]:
                 (_SUPPLIER_SIDE, "INBOUND", "supplier-side"),
                 (_CUSTOMER_SIDE, "OUTBOUND", "customer-side"),
                 (_LICENSE_SIDE, "OUTBOUND", "license-side"),
+                (_PARTNERSHIP, "PARTNERS", "partnership"),
             ):
                 if pattern.search(sentence):
                     out.append({"alias": alias, "ticker": ticker, "direction": direction,
@@ -159,9 +190,10 @@ def scan_filing(graph: RelateSupplyChainGraph, ticker: str,
     for form in forms:
         if form not in FORM_PROFILES or FORM_PROFILES[form].char_cap <= 0:
             continue
-        # One substantive annual report per form is the disclosure; older ones only restate it, and
-        # substantive_filings already steps past the amendment that pretends to be one.
-        for filing, raw in substantive_filings(company, form, FORM_PROFILES[form], limit=1):
+        profile = FORM_PROFILES[form]
+        # One substantive annual report is the disclosure and older ones only restate it, but an
+        # 8-K is a single event, so the profile's own limit decides how many are worth reading.
+        for filing, raw in substantive_filings(company, form, profile, limit=profile.filing_limit):
             accession = str(filing.accession_number)
             paragraphs = list(_iter_paragraphs(raw))
             if not paragraphs:
@@ -188,8 +220,6 @@ def scan_filing(graph: RelateSupplyChainGraph, ticker: str,
                         "as_of": str(filing.filing_date), "heading": heading,
                         "quote": hit["sentence"][:400], "score": score,
                     })
-            # One substantive annual report per form is the disclosure; older ones only restate it.
-            break
 
     dedup: Dict[tuple, Dict[str, Any]] = {}
     for hit in sorted(found, key=lambda h: -h["score"]):
@@ -209,17 +239,27 @@ def _edges_needing_provenance(graph: RelateSupplyChainGraph, tickers: Optional[L
     return rows
 
 
+def _forms(args) -> tuple:
+    """Which filing types to read: annual report by default, plus 8-K when asked."""
+    wanted = tuple(f.strip().upper() for f in (args.forms or "").split(",") if f.strip())
+    if wanted:
+        return wanted
+    return PROSE_FORMS + (EVENT_FORMS if args.events else ())
+
+
 def cmd_propose(graph, args):
     global CANDIDATES
+    forms = _forms(args)
     CANDIDATES = {t.strip().upper() for t in args.tickers.split(",") if t.strip()}
     total = applied = 0
     for ticker in sorted(CANDIDATES):
-        hits = scan_filing(graph, ticker)
+        hits = scan_filing(graph, ticker, forms)
         print(f"\n{ticker}: {len(hits)} evidenced relationship(s)")
         for h in hits[:args.limit]:
             arrow = {"INBOUND": f"{h['other']} -> {h['filer']}",
                      "OUTBOUND": f"{h['filer']} -> {h['other']}",
-                     "INVESTED_IN": f"{h['filer']} invests in {h['other']}"}[h["direction"]]
+                     "INVESTED_IN": f"{h['filer']} invests in {h['other']}",
+                     "PARTNERS": f"{h['filer']} + {h['other']}"}[h["direction"]]
             print(f"  [{h['pattern']:12}] {arrow:26} {h['form']} {h['as_of']} "
                   f"acc={h['accession_no']} score={h['score']}")
             print(f"      {h['quote'][:220]}")
@@ -230,6 +270,8 @@ def cmd_propose(graph, args):
                     src, tgt, rel = h["other"], h["filer"], "SUPPLIES_TO"
                 elif h["direction"] == "OUTBOUND":
                     src, tgt, rel = h["filer"], h["other"], "SUPPLIES_TO"
+                elif h["direction"] == "PARTNERS":
+                    src, tgt, rel = h["filer"], h["other"], "PARTNERS_WITH"
                 else:
                     src, tgt, rel = h["filer"], h["other"], "INVESTED_IN"
                 graph.add_node(src, src, "Company")
@@ -253,24 +295,26 @@ def cmd_cite(graph, args):
     name differs company by company. Scanning only the edge's source silently misses the cases where
     the disclosure sits on the other end of the same relationship.
     """
+    forms = _forms(args)
     rows = _edges_needing_provenance(graph, None if args.all else
                                      [t.strip() for t in (args.tickers or "").split(",") if t.strip()])
-    print(f"edges without provenance: {len(rows)}")
+    print(f"edges without provenance: {len(rows)} | forms read: {', '.join(forms)}")
 
     cache: Dict[str, Dict[str, Dict[str, Any]]] = {}
 
     def hits(company: str) -> Dict[str, Dict[str, Any]]:
         if company not in cache:
-            cache[company] = {h["other"]: h for h in scan_filing(graph, company)}
+            cache[company] = {h["other"]: h for h in scan_filing(graph, company, forms)}
         return cache[company]
 
     # (filer whose disclosure we read, counterparty it names, direction that disclosure implies)
     plans = {
         "SUPPLIES_TO": ((("source", "target", "OUTBOUND"), "supplier-side per its own filing"),
                         (("target", "source", "INBOUND"), "named as a dependency by the buyer")),
-        "INVESTED_IN": ((("source", "target", "INVESTED_IN"), "ownership stated by the investor"),),
-        "PARTNERS_WITH": ((("source", "target", "OUTBOUND"), "partnership stated by the filer"),
-                          (("target", "source", "OUTBOUND"), "partnership stated by the partner")),
+        "INVESTED_IN": ((("source", "target", "INVESTED_IN"), "ownership stated by the investor"),
+                        (("target", "source", "INVESTED_IN"), "ownership stated in the investee's filing")),
+        "PARTNERS_WITH": ((("source", "target", "PARTNERS"), "partnership stated by the filer"),
+                          (("target", "source", "PARTNERS"), "partnership stated by the partner")),
     }
 
     cited = unmatched = 0
@@ -317,6 +361,11 @@ def main():
     c = sub.add_parser("cite", help="attach evidence to existing edges lacking provenance")
     c.add_argument("--tickers", default="")
     c.add_argument("--all", action="store_true")
+    for cmd in (p, c):
+        cmd.add_argument("--events", action="store_true",
+                         help="also read 8-K press releases, which name partners more often")
+        cmd.add_argument("--forms", default="",
+                         help="override the forms to read, e.g. --forms 10-K,8-K")
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.WARNING, format="%(levelname)s %(name)s: %(message)s")
