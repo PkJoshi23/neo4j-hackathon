@@ -13,6 +13,7 @@ No LLM is imported, so this costs no DeepSeek tokens.
 
     python backfill_chunks.py --dry-run
     python backfill_chunks.py --tickers NVDA,MU
+    python backfill_chunks.py --add GFS,TER,SNPS   # new companies, from their own filings
     python backfill_chunks.py
 """
 
@@ -69,6 +70,65 @@ def _match_filing(company, form: str, accession_no: str):
     return None
 
 
+def embed_and_store(graph: RelateSupplyChainGraph, model, ticker: str, form: str,
+                    accession_no: str, as_of: str, chunks: List[Dict]) -> int:
+    """Embeds chunks locally and writes them behind the indexes the app queries."""
+    vectors = model.encode(
+        [chunk["text"] for chunk in chunks], batch_size=16, convert_to_numpy=True
+    ).tolist()
+    rows = [
+        {
+            "id": f"{ticker}_{accession_no}_{chunk['fp']}",
+            "text": chunk["text"],
+            "ticker": ticker,
+            "accession_no": accession_no,
+            "form": form,
+            "as_of": as_of,
+            "heading": chunk["heading"],
+            "fp": chunk["fp"],
+            "embedding": vector,
+        }
+        for chunk, vector in zip(chunks, vectors)
+        if len(vector) == CHUNK_EMBEDDING_DIM
+    ]
+    return graph.save_chunks(rows)
+
+
+def add_companies(graph: RelateSupplyChainGraph, model, tickers: List[str]) -> int:
+    """
+    Create nodes for companies the graph has never read, and embed their annual reports.
+
+    An expansion driven by an industry map is only honest if each new node arrives with the filing
+    behind it, so this fetches the substantive 10-K/20-F and stops there: chunking and embedding are
+    local, so the whole thing costs no LLM tokens. Relationships are not inferred here - they still
+    have to be earned with `edge_provenance.py propose --apply`, which reads what the filer states.
+    """
+    added = 0
+    for ticker in tickers:
+        try:
+            company = Company(ticker)
+        except Exception as exc:
+            print(f"{ticker:10} SKIPPED - not resolvable on EDGAR ({str(exc)[:50]})")
+            continue
+        graph.add_node(ticker, ticker, "Company", full_name=getattr(company, "name", ticker))
+        stored = 0
+        for form in ("10-K", "20-F"):
+            profile = FORM_PROFILES[form]
+            for filing, raw in substantive_filings(company, form, profile, limit=1):
+                chunks = build_chunks(raw, profile.char_cap)
+                if not chunks:
+                    print(f"{ticker:10} {form}: no signal paragraphs matched")
+                    continue
+                accession_no, as_of = str(filing.accession_number), str(filing.filing_date)
+                graph.record_filing(f"{ticker}_{accession_no}", ticker, accession_no, form, as_of)
+                stored += embed_and_store(graph, model, ticker, form, accession_no, as_of, chunks)
+                print(f"{ticker:10} {form} {accession_no}: +{stored} chunks")
+        if not stored:
+            print(f"{ticker:10} node created, but no annual report yielded excerpts")
+        added += 1
+    return added
+
+
 def backfill(graph: RelateSupplyChainGraph, model, pending: Dict[str, List[Dict]],
              dry_run: bool = False) -> Dict[str, int]:
     per_ticker: Dict[str, int] = {}
@@ -117,25 +177,8 @@ def backfill(graph: RelateSupplyChainGraph, model, pending: Dict[str, List[Dict]
                 print(f"{ticker:10} {accession_no} no signal paragraphs matched")
                 continue
 
-            vectors = model.encode(
-                [chunk["text"] for chunk in chunks], batch_size=16, convert_to_numpy=True
-            ).tolist()
-            rows = [
-                {
-                    "id": f"{ticker}_{accession_no}_{chunk['fp']}",
-                    "text": chunk["text"],
-                    "ticker": ticker,
-                    "accession_no": accession_no,
-                    "form": filing_row["form"],
-                    "as_of": as_of,
-                    "heading": chunk["heading"],
-                    "fp": chunk["fp"],
-                    "embedding": vector,
-                }
-                for chunk, vector in zip(chunks, vectors)
-                if len(vector) == CHUNK_EMBEDDING_DIM
-            ]
-            stored += graph.save_chunks(rows)
+            stored += embed_and_store(graph, model, ticker, filing_row["form"],
+                                      accession_no, as_of, chunks)
         per_ticker[ticker] = stored
         print(f"{ticker:10} {stored:4} chunks from {len(filings)} filings")
 
@@ -151,6 +194,8 @@ def main():
     parser.add_argument("--tickers", default=None, help="comma-separated subset, e.g. NVDA,MU")
     parser.add_argument("--all", action="store_true",
                         help="re-chunk filings that already have chunks too")
+    parser.add_argument("--add", default=None,
+                        help="create these tickers and embed their annual reports, e.g. GFS,TER")
     parser.add_argument("--dry-run", action="store_true", help="report, write nothing")
     args = parser.parse_args()
 
@@ -158,6 +203,17 @@ def main():
     init_sec_identity()
 
     graph = RelateSupplyChainGraph(args.db) if args.db else RelateSupplyChainGraph()
+
+    if args.add:
+        new = [t.strip().upper() for t in args.add.split(",") if t.strip()]
+        print(f"adding {len(new)} companies from their own annual reports (no LLM tokens)")
+        model = SentenceTransformer("BAAI/bge-small-en-v1.5")
+        add_companies(graph, model, new)
+        print(f"\nnodes now: {graph.count_nodes()} | chunks now: {graph.chunk_count()}")
+        graph.export_json()
+        graph.store.close()
+        return
+
     pending = filings_without_chunks(graph)
     if args.all:
         rows = graph._rows(
