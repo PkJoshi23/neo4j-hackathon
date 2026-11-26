@@ -4,6 +4,7 @@ agent.py - Tool-using supply-chain analyst agent over the Relate graph.
 The agent plans, calls tools, observes results and only then answers. Tools are:
   graph_query      read-only Cypher against the embedded Relate graph
   graph_overview   totals and relationship mix
+  layer_concentration per-industrial-layer member count, buyer load and evidence coverage
   company_network  direct suppliers / customers / partners / investments for a ticker
   search_filings   vector (or keyword) search over ingested SEC excerpts, with citations
   ingest_company   fetch + ingest the latest SEC filings for a ticker (the only writer)
@@ -45,6 +46,11 @@ How to work:
 - Relationships are DIRECTED. Never claim an edge exists in both directions unless the tool
   returns two rows (one per direction). A partner query that returns one row means one edge.
 - Distinguish supply-chain edges from capital/partnership edges (INVESTED_IN, PARTNERS_WITH).
+- For "which layer is the chokepoint", call layer_concentration: it reports each industrial
+  layer's member count, which supplier carries the most buyer relationships, and how much of
+  the layer is backed by a filing.
+- An edge with no accession number was curated by hand, not read out of a filing. Say so when
+  you rely on one rather than implying the SEC disclosed it.
 - Be concise: a few short paragraphs or bullets, then a short "Evidence" list.
 - You may call at most 5 tools. Stop calling tools once you can answer.
 """
@@ -76,6 +82,20 @@ def _tool_specs() -> List[Dict[str, Any]]:
             "function": {
                 "name": "graph_overview",
                 "description": "Graph totals: companies, relationships by type, filings by form, tier sizes.",
+                "parameters": {"type": "object", "properties": {}},
+            },
+        },
+        {
+            "type": "function",
+            "function": {
+                "name": "layer_concentration",
+                "description": (
+                    "Per industrial layer (Materials, EDA, Fab Equipment, Foundry, Memory, "
+                    "Photonics, Silicon, Test, Systems, Power, Cloud): member count, how many "
+                    "buyers its suppliers serve, which company carries the largest share of that "
+                    "load, and what percentage of its edges cite a filing. Use this to answer "
+                    "which layer is a chokepoint or single point of failure."
+                ),
                 "parameters": {"type": "object", "properties": {}},
             },
         },
@@ -178,6 +198,17 @@ class SupplyChainAgent:
             "companies_per_tier": {str(row["tier"]): row["c"] for row in tiers},
         }
 
+    def _tool_layer_concentration(self) -> Dict[str, Any]:
+        layers = self.graph.get_layer_map()
+        if not layers:
+            return {"layers": [], "note": "No company carries a layer tag yet."}
+        return {
+            "layers": layers,
+            "read": ("load_share is the fraction of that layer's buyer relationships carried by "
+                     "its single largest supplier; evidence_pct is how much of the layer is "
+                     "backed by a filing rather than curated by hand."),
+        }
+
     def _tool_company_network(self, ticker: str) -> Dict[str, Any]:
         node_id = self.graph.resolve_node_id((ticker or "").upper().strip())
         if not node_id:
@@ -249,6 +280,8 @@ class SupplyChainAgent:
             return self._tool_graph_query(arguments.get("cypher", ""))
         if name == "graph_overview":
             return self._tool_graph_overview()
+        if name == "layer_concentration":
+            return self._tool_layer_concentration()
         if name == "company_network":
             return self._tool_company_network(arguments.get("ticker", ""))
         if name == "search_filings":
@@ -265,6 +298,12 @@ class SupplyChainAgent:
             return f"{result.get('rows', 0)} row(s), {result.get('matched_nodes', 0)} node(s), {result.get('matched_edges', 0)} edge(s)"
         if name == "graph_overview":
             return f"{result.get('companies', 0)} companies, {sum((result.get('relationships') or {}).values())} relationships"
+        if name == "layer_concentration":
+            rows = result.get("layers") or []
+            top = rows[0] if rows else None
+            return (f"{len(rows)} layer(s), most concentrated: "
+                    f"{top['layer']} ({top['top_supplier']} = {int(top['load_share'] * 100)}%)"
+                    if top else "no layer data")
         if name == "company_network":
             return (f"{result.get('ticker')}: {len(result.get('suppliers', []))} suppliers, "
                     f"{len(result.get('customers', []))} customers, {len(result.get('partners', []))} partners")

@@ -92,6 +92,52 @@ def infer_tier(node_id: str, node_type: str = "Company") -> int:
     return TICKER_TIERS.get(key, DEFAULT_TIER)
 
 
+# `tier` is depth in the money flow; `layer` is the industrial segment. A reader asking "which
+# layer of the photonics stack is single-source" needs the segment, and without it that question
+# can only be answered by eyeballing the topology. Unknown tickers get no layer rather than a
+# guessed one, so a layer filter never silently includes the wrong company.
+LAYER_DEFINITIONS = {
+    "materials": "Materials & Substrates",
+    "eda": "EDA, IP & Design",
+    "equipment": "Fab Equipment & Metrology",
+    "foundry": "Foundry & Advanced Packaging",
+    "memory": "Memory & HBM",
+    "photonics": "Optics, Lasers & Photonics",
+    "silicon": "Accelerators & Switch Silicon",
+    "test": "Test & Inspection",
+    "system": "Servers, Cooling & Facilities",
+    "power": "Power, Grid & Fuel",
+    "cloud": "Cloud & AI Demand",
+}
+
+TICKER_LAYERS = {
+    "AXTI": "materials", "LWLG": "materials", "ENTG": "materials", "LIN": "materials",
+    "PLAB": "materials", "4063.T": "materials", "3436.T": "materials", "MP": "materials",
+    "FCX": "materials", "SCCO": "materials", "TECK": "materials",
+    "SNPS": "eda", "CDNS": "eda", "ARM": "eda", "AIP": "eda",
+    "ASML": "equipment", "AMAT": "equipment", "LRCX": "equipment", "KLAC": "equipment",
+    "ONTO": "equipment",
+    "TSM": "foundry", "INTC": "foundry", "GFS": "foundry", "UMC": "foundry", "TSEM": "foundry",
+    "MU": "memory", "000660.KS": "memory", "SKHY": "memory", "WDC": "memory", "STX": "memory",
+    "LITE": "photonics", "COHR": "photonics", "AAOI": "photonics", "POET": "photonics",
+    "MTSI": "photonics", "LASR": "photonics", "CRDO": "photonics", "ALAB": "photonics",
+    "NVDA": "silicon", "AMD": "silicon", "AVGO": "silicon", "MRVL": "silicon",
+    "ANET": "silicon", "QCOM": "silicon",
+    "TER": "test", "AEHR": "test", "COHU": "test",
+    "SMCI": "system", "DELL": "system", "HPE": "system", "VRT": "system", "AAON": "system",
+    "VST": "power", "CEG": "power", "ETN": "power", "GEV": "power", "PWR": "power",
+    "HUBB": "power", "POWL": "power", "OKLO": "power", "BWXT": "power", "CCJ": "power",
+    "NXE": "power", "UUUU": "power",
+    "MSFT": "cloud", "AMZN": "cloud", "GOOGL": "cloud", "META": "cloud", "AAPL": "cloud",
+    "ORCL": "cloud", "CRWV": "cloud", "IREN": "cloud", "NBIS": "cloud", "PLTR": "cloud",
+}
+
+
+def infer_layer(node_id: str) -> Optional[str]:
+    key = re.sub(r"[^A-Z0-9.]", "", str(node_id).upper())
+    return LAYER_DEFINITIONS.get(TICKER_LAYERS.get(key, ""))
+
+
 def _register_shutdown(func):
     """
     Runs `func` before ThreadPoolExecutor workers are joined.
@@ -221,6 +267,7 @@ class RelateSupplyChainGraph:
             self.seed_ai_supply_chain()
         self._ensure_chunk_schema()
         self._migrate_legacy_chunks()
+        self.sync_layers()
         self._refresh_cache()
 
     # ------------------------------------------------------------------
@@ -338,6 +385,9 @@ class RelateSupplyChainGraph:
             "tier": resolved_tier,
             "tier_name": TIER_DEFINITIONS.get(resolved_tier, {}).get("name", f"Tier {resolved_tier}"),
         }
+        layer = infer_layer(node_id) or props.get("layer")
+        if layer:
+            properties["layer"] = layer
         for key in ("full_name", "description", "notes"):
             if props.get(key):
                 properties[key] = props[key]
@@ -498,6 +548,23 @@ class RelateSupplyChainGraph:
         logger.info("Migrated %d chunks into Relate; %s left in place as a backup.",
                     written, self.chunks_file)
         return written
+
+    def sync_layers(self) -> int:
+        """
+        Tag every tracked company with its industrial layer.
+
+        Nodes predating the taxonomy carry no layer, and a missing property reads as 'not in
+        any layer' to a Cypher filter, so this runs on every start rather than only on seeding.
+        """
+        rows = [{"id": t, "layer": name} for t, key in TICKER_LAYERS.items()
+                for name in [LAYER_DEFINITIONS.get(key)] if name]
+        if not rows:
+            return 0
+        self._rows(
+            "UNWIND $rows AS r MATCH (n:Company {id: r.id}) SET n.layer = r.layer",
+            {"rows": rows},
+        )
+        return len(rows)
 
     def chunk_count(self) -> int:
         return self._rows("MATCH (c:Chunk) RETURN count(c) AS n")[0]["n"]
@@ -729,8 +796,8 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
         try:
             nodes = self._rows(
                 "MATCH (n:Company) RETURN n.id AS id, n.label AS label, n.type AS type, "
-                "n.tier AS tier, n.tier_name AS tier_name, n.full_name AS full_name, "
-                "n.description AS description"
+                "n.tier AS tier, n.tier_name AS tier_name, n.layer AS layer, "
+                "n.full_name AS full_name, n.description AS description"
             )
             edges = self._rows(
                 "MATCH (a:Company)-[r]->(b:Company) RETURN a.id AS source, b.id AS target, "
@@ -807,6 +874,7 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
             self.record_filing(filing_id, info.get("ticker", ""), info.get("accession_no", ""),
                                info.get("form", ""), info.get("filing_date", ""))
 
+        self.sync_layers()
         self._refresh_cache()
         return {"nodes": imported_nodes, "edges": imported_edges, "filings": len(filings)}
 
@@ -874,6 +942,60 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
             })
 
         return nodes_dict, edges_list, tier_counts
+
+    def get_layer_map(self) -> List[Dict[str, Any]]:
+        """
+        Per-layer concentration, the question a tier view cannot answer.
+
+        A tier says how deep in the money flow a company sits; this says whether the layer it
+        sits in is a chokepoint - how many buyers its members serve, and how much of that load
+        one company carries. Evidence coverage travels with it, because a layer that is dense
+        but uncited is a claim, not a finding.
+        """
+        members = {
+            row["layer"]: row["n"] for row in self._rows(
+                "MATCH (n:Company) WHERE n.layer IS NOT NULL "
+                "RETURN n.layer AS layer, count(n) AS n"
+            )
+        }
+        flows = self._rows(
+            "MATCH (a:Company)-[r:SUPPLIES_TO]->(b:Company) WHERE a.layer IS NOT NULL "
+            "RETURN a.layer AS layer, a.id AS supplier, count(DISTINCT b.id) AS buyers"
+        )
+        citations = {
+            row["layer"]: row for row in self._rows(
+                "MATCH (a:Company)-[r]->(b:Company) WHERE a.layer IS NOT NULL "
+                "RETURN a.layer AS layer, count(r) AS edges, "
+                "sum(CASE WHEN r.accession_no IS NULL THEN 1 ELSE 0 END) AS uncited"
+            )
+        }
+        by_layer: Dict[str, List[Dict[str, Any]]] = {}
+        for row in flows:
+            by_layer.setdefault(row["layer"], []).append(row)
+
+        out: List[Dict[str, Any]] = []
+        for layer, supplier_rows in by_layer.items():
+            supplier_rows.sort(key=lambda r: -r["buyers"])
+            total = sum(r["buyers"] for r in supplier_rows)
+            top = supplier_rows[0]
+            cite = citations.get(layer, {})
+            out.append({
+                "layer": layer,
+                "members": members.get(layer, 0),
+                "suppliers_with_edges": len(supplier_rows),
+                "supply_edges": total,
+                "top_supplier": top["supplier"],
+                "top_supplier_buyers": top["buyers"],
+                # Share of the layer's buyer relationships carried by its largest supplier: the
+                # single number that separates a competitive layer from a single point of failure.
+                "load_share": round(top["buyers"] / total, 2) if total else 0.0,
+                "edges": cite.get("edges", 0),
+                "uncited_edges": cite.get("uncited", 0),
+                "evidence_pct": round(100.0 * (cite.get("edges", 0) - cite.get("uncited", 0))
+                                      / cite["edges"], 1) if cite.get("edges") else 0.0,
+            })
+        out.sort(key=lambda item: (-item["top_supplier_buyers"], -item["load_share"]))
+        return out
 
     def get_topology(self, focus_ticker: str, hops: int = 1,
                      show_components: bool = True) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
