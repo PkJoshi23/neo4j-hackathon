@@ -1,19 +1,24 @@
-# Relate by Neo4j - embedded graph database (the app's source of truth)
-relate-db>=1.1.0
+# Pinned to the versions this app is verified running on (Python 3.11).
+# Relate by Neo4j - embedded graph database (the app's source of truth).
+# 1.1.0 already supports typed vector() properties, CREATE VECTOR INDEX,
+# CREATE FULLTEXT INDEX and the Cypher 25 SEARCH clause.
+relate-db==1.1.0
 
 # Frontend & Interactive Network Visualization
-streamlit>=1.35.0
-streamlit-agraph>=0.0.45
+streamlit==1.58.0
+streamlit-agraph==0.0.45
 
 # SEC EDGAR Ingestion & Data Sieve
-edgartools>=2.15.0
+edgartools==6.3.0
 
 # Local HuggingFace Embeddings ($0 API Spend)
-sentence-transformers>=2.6.0
-numpy>=1.24.0
+sentence-transformers==6.3.0
+numpy==2.4.6
+
+# Tabular views (imported directly by app.py)
+pandas==3.0.5
 
 # LLM Endpoint & Config
-openai>=1.25.0
-python-dotenv>=1.0.0
-pydantic>=2.0.0
-
+openai==2.45.0
+python-dotenv==1.0.0
+pydantic==2.13.4
