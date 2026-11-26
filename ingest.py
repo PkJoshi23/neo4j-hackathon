@@ -627,10 +627,18 @@ def _store_chunks(relate_graph: RelateSupplyChainGraph, ticker: str, document: D
         logger.warning("Embedding failed for %s %s: %s", document["form"], document["accession_no"], exc)
         return 0
 
-    for index, (text, embedding) in enumerate(zip(paragraphs, embeddings)):
-        chunk_id = f"{ticker}_{document['accession_no']}_{index}"
-        relate_graph.save_chunk(chunk_id, text, ticker, document["accession_no"], embedding)
-    return len(paragraphs)
+    rows = [
+        {
+            "id": f"{ticker}_{document['accession_no']}_{index}",
+            "text": text,
+            "ticker": ticker,
+            "accession_no": document["accession_no"],
+            "embedding": embedding,
+        }
+        for index, (text, embedding) in enumerate(zip(paragraphs, embeddings))
+    ]
+    # one UNWIND statement for the whole filing, instead of one rewrite per excerpt
+    return relate_graph.save_chunks(rows)
 
 
 async def efficient_ingest_ticker(

@@ -13,9 +13,12 @@ which is the agentic part judges are scoring.
 """
 
 import json
+import logging
 import re
 import time
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 READ_ONLY_FORBIDDEN = re.compile(
     r"\b(CREATE|MERGE|DELETE|DETACH|SET|REMOVE|DROP|LOAD|FOREACH|CALL|ALTER|GRANT)\b",
@@ -193,40 +196,29 @@ class SupplyChainAgent:
         }
 
     def _tool_search_filings(self, query: str, k: int = 3) -> Dict[str, Any]:
-        chunks = getattr(self.graph, "chunks", []) or []
-        if not chunks:
-            return {"error": "No filing excerpts are ingested yet."}
-        k = max(1, min(int(k or 3), 5))
-
-        scores: List[float] = []
+        """
+        Delegates to Relate: one fused vector + BM25 statement, not a scan of a Python list.
+        """
+        query_embedding = None
         if self.embedder is not None:
             try:
-                import numpy as np
-
-                query_vector = np.array(self.embedder.encode(query).tolist(), dtype=np.float32)
-                query_norm = float(np.linalg.norm(query_vector)) or 1.0
-                for chunk in chunks:
-                    vector = np.array(chunk["embedding"], dtype=np.float32)
-                    scores.append(float(np.dot(query_vector, vector) / ((np.linalg.norm(vector) or 1.0) * query_norm)))
-            except Exception:
-                scores = []
-
-        if not scores:
-            terms = [t for t in re.findall(r"[a-z0-9]+", (query or "").lower()) if len(t) > 2]
-            for chunk in chunks:
-                text = (chunk.get("text") or "").lower()
-                scores.append(float(sum(text.count(term) for term in terms)))
-
-        ranked = sorted(zip(scores, chunks), key=lambda item: item[0], reverse=True)[:k]
-        results = []
-        for score, chunk in ranked:
-            results.append({
-                "ticker": chunk.get("ticker"),
-                "accession_no": chunk.get("accession_no"),
-                "score": round(score, 3),
-                "excerpt": (chunk.get("text") or "")[:350],
-            })
-        return {"results": results}
+                query_embedding = list(self.embedder.encode(query).tolist())
+            except Exception as exc:
+                logger.warning("Could not embed the search query: %s", exc)
+        hits = self.graph.hybrid_search_chunks(query, query_embedding, top_k=k)
+        if not hits:
+            return {"results": [], "note": "No filing excerpt matches this query."}
+        return {"results": [
+            {
+                "ticker": hit.get("ticker"),
+                "accession_no": hit.get("accession_no"),
+                "rrf": round(float(hit.get("rrf") or 0.0), 5),
+                "found_by": "vector+fulltext" if hit.get("lists", 0) > 1 else (
+                    "fulltext" if hit.get("v_rank") is None else "vector"),
+                "excerpt": (hit.get("text") or "")[:350],
+            }
+            for hit in hits
+        ]}
 
     def _tool_ingest_company(self, ticker: str) -> Dict[str, Any]:
         symbol = (ticker or "").upper().strip()

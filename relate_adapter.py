@@ -20,8 +20,6 @@ from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional, Tuple
 
-import numpy as np
-
 logger = logging.getLogger(__name__)
 
 try:
@@ -34,6 +32,14 @@ except ImportError:
 
 DEFAULT_RL_PATH = os.path.join(os.path.dirname(__file__), "supply_chain.rl")
 DEFAULT_CHUNKS_PATH = os.path.join(os.path.dirname(__file__), "supply_chain_chunks.json")
+
+# Filing excerpts are embedded with BAAI/bge-small-en-v1.5. The Relate vector index is
+# built for exactly this width, so a chunk with any other dimensionality cannot be indexed
+# and is skipped with a warning rather than silently corrupting search.
+CHUNK_EMBEDDING_DIM = 384
+# Reciprocal Rank Fusion constant: dampens the gap between rank 1 and rank 2 so a chunk
+# that both indexes like has more pull than one that tops a single list.
+RRF_K = 60
 
 # Architectural Tier Definitions for the AI Stack View.
 # Tier -1 sits *below* equipment: the materials and specialty inputs the whole stack consumes.
@@ -210,9 +216,10 @@ class RelateSupplyChainGraph:
         self.chunks_file = DEFAULT_CHUNKS_PATH
         self.store = RelateStore(db_path)
         self._node_cache: Dict[str, Dict[str, Any]] = {}
-        self._load_chunks()
         if self.count_nodes() == 0:
             self.seed_ai_supply_chain()
+        self._ensure_chunk_schema()
+        self._migrate_legacy_chunks()
         self._refresh_cache()
 
     # ------------------------------------------------------------------
@@ -442,42 +449,176 @@ class RelateSupplyChainGraph:
         return removed
 
     # ------------------------------------------------------------------
-    # Chunks (vector sidecar) - embeddings stay in JSON; graph context comes from Relate
+    # Chunks - filing excerpts and their vectors live in Relate, indexed natively
     # ------------------------------------------------------------------
-    def _load_chunks(self):
-        """Loads embedded text chunks and vectors for GraphRAG retrieval."""
-        self.chunks: List[Dict[str, Any]] = []
-        if os.path.exists(self.chunks_file):
+    def _ensure_chunk_schema(self) -> None:
+        """Create the vector and full-text indexes over :Chunk (idempotent)."""
+        for statement in (
+            "CREATE VECTOR INDEX chunk_emb IF NOT EXISTS FOR (c:Chunk) ON (c.embedding) "
+            "WITH [c.ticker] OPTIONS {indexConfig: {"
+            "`vector.dimensions`: " + str(CHUNK_EMBEDDING_DIM) + ", "
+            "`vector.similarity_function`: 'cosine'}}",
+            "CREATE FULLTEXT INDEX chunk_text IF NOT EXISTS FOR (c:Chunk) ON EACH [c.text]",
+        ):
             try:
-                with open(self.chunks_file, "r", encoding="utf-8") as handle:
-                    self.chunks = json.load(handle)
+                self._rows(statement)
             except Exception as exc:
-                logger.warning("Could not load chunks file: %s", exc)
+                logger.warning("Could not create a chunk index: %s", exc)
 
-    def save_chunk(self, chunk_id: str, text: str, ticker: str, accession_no: str,
-                   embedding: List[float]):
-        """Stores a filing excerpt chunk and its embedding vector for GraphRAG retrieval."""
-        existing = next((c for c in self.chunks if c["id"] == chunk_id), None)
-        if existing:
-            existing.update({
-                "text": text,
-                "embedding": embedding,
-                "ticker": ticker,
-                "accession_no": accession_no,
-            })
-        else:
-            self.chunks.append({
-                "id": chunk_id,
-                "text": text,
-                "ticker": ticker,
-                "accession_no": accession_no,
-                "embedding": embedding,
-            })
+    def _migrate_legacy_chunks(self) -> int:
+        """
+        Move the old supply_chain_chunks.json sidecar into Relate once. The file is only set
+        aside after the graph confirms it holds every chunk, so a failed write can never
+        discard the sidecar.
+        """
+        if not os.path.exists(self.chunks_file):
+            return 0
         try:
-            with open(self.chunks_file, "w", encoding="utf-8") as handle:
-                json.dump(self.chunks, handle, indent=2)
+            with open(self.chunks_file, "r", encoding="utf-8") as handle:
+                legacy = json.load(handle)
         except Exception as exc:
-            logger.warning("Could not save chunks: %s", exc)
+            logger.warning("Could not read legacy chunks: %s", exc)
+            return 0
+        if not legacy:
+            return 0
+
+        already = self.chunk_count()
+        if already >= len(legacy):
+            logger.info("Chunks already live in Relate (%d); sidecar left untouched.", already)
+            return 0
+
+        written = self.save_chunks(legacy)
+        if self.chunk_count() < len(legacy):
+            logger.warning("Migration incomplete (%d of %d chunks in Relate); keeping %s",
+                           self.chunk_count(), len(legacy), self.chunks_file)
+            return written
+        os.replace(self.chunks_file, self.chunks_file + ".migrated")
+        logger.info("Migrated %d chunks into Relate; sidecar kept as %s.",
+                    written, self.chunks_file + ".migrated")
+        return written
+
+    def chunk_count(self) -> int:
+        return self._rows("MATCH (c:Chunk) RETURN count(c) AS n")[0]["n"]
+
+    def save_chunks(self, chunks: List[Dict[str, Any]]) -> int:
+        """
+        Batch-write excerpts as (:Chunk)-[:ABOUT]->(:Company) in one statement, so a filing of
+        N excerpts costs one round trip instead of N full-file rewrites.
+        """
+        rows = []
+        for chunk in chunks or []:
+            vector = chunk.get("embedding") or []
+            if not chunk.get("id") or not chunk.get("text"):
+                continue
+            if len(vector) != CHUNK_EMBEDDING_DIM:
+                logger.warning("Skipping chunk %s: %d-dim vector, index expects %d",
+                               chunk.get("id"), len(vector), CHUNK_EMBEDDING_DIM)
+                continue
+            rows.append({
+                "id": chunk["id"],
+                "text": chunk["text"],
+                "ticker": (chunk.get("ticker") or "").upper(),
+                "accession_no": chunk.get("accession_no"),
+                "e": [float(v) for v in vector],
+            })
+        if not rows:
+            return 0
+        # An excerpt whose ticker has no Company node can never join the graph, which would
+        # make it plain RAG. Seed the node from curated tier metadata (the ticker is proven by
+        # the filing itself); no relationship is implied.
+        for ticker in {row["ticker"] for row in rows if row["ticker"]}:
+            if not self.resolve_node_id(ticker):
+                self.add_node(ticker, ticker, "Company")  # add_node refreshes the cache
+        self._rows(
+            "UNWIND $rows AS r "
+            "MERGE (c:Chunk {id: r.id}) "
+            "SET c.text = r.text, c.ticker = r.ticker, c.accession_no = r.accession_no, "
+            "c.embedding = vector(r.e, $dim, FLOAT32) "
+            "WITH c MATCH (co:Company {id: c.ticker}) MERGE (c)-[:ABOUT]->(co)",
+            {"rows": rows, "dim": CHUNK_EMBEDDING_DIM},
+        )
+        return len(rows)
+
+    @staticmethod
+    def _fulltext_query(query_text: str) -> str:
+        """
+        Reduce a user question to plain terms. Relate's full-text parser reads ^ as a boost,
+        ~ as fuzzy, * and ? as wildcards and uppercase AND/OR/NOT as operators, so those have
+        to go or a question about "co-owned" stock silently changes meaning.
+        """
+        cleaned = re.sub(r"[^A-Za-z0-9' ]+", " ", query_text or "")
+        cleaned = re.sub(r"\b(AND|OR|NOT|TO)\b", " ", cleaned)
+        return " ".join(cleaned.split())[:200]
+
+    def hybrid_search_chunks(self, query_text: str, query_embedding: Optional[List[float]] = None,
+                             top_k: int = 5) -> List[Dict[str, Any]]:
+        """
+        One statement: Relate's vector index and BM25 full-text index are fused with
+        Reciprocal Rank Fusion, then each hit hops to the Company it describes.
+
+        A chunk in both lists outranks a chunk leading one, which is what keeps an exact
+        accession-number or product-name match from being buried by generic prose.
+        Without an embedding the BM25 arm is used on its own instead of degrading to a
+        keyword count.
+        """
+        limit = max(1, min(int(top_k or 5), 10))
+        params = {"q": self._fulltext_query(query_text), "k": limit, "rrf": RRF_K}
+        usable_vector = (
+            query_embedding is not None and len(query_embedding) == CHUNK_EMBEDDING_DIM
+        )
+        if not usable_vector:
+            if not params["q"]:
+                return []
+            statement = """
+MATCH (c:Chunk)
+SEARCH c IN (FULLTEXT INDEX chunk_text FOR $q LIMIT $k) SCORE AS s
+WITH c, s ORDER BY s DESC, c.id
+WITH collect(c) AS cs
+UNWIND range(0, size(cs) - 1) AS i
+WITH cs[i] AS c, i + 1 AS rank
+ORDER BY rank LIMIT $k
+OPTIONAL MATCH (c)-[:ABOUT]->(co:Company)
+RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accession_no,
+       1.0 / ($rrf + rank) AS rrf, 1 AS lists, null AS v_rank, rank AS f_rank, collect(co.tier) AS tiers
+"""
+        else:
+            params["v"] = [float(value) for value in query_embedding]
+            statement = """
+CALL () {
+  MATCH (c:Chunk)
+  SEARCH c IN (VECTOR INDEX chunk_emb FOR $v LIMIT $k) SCORE AS s
+  WITH c, s ORDER BY s DESC, c.id
+  WITH collect(c) AS cs, collect(s) AS ss
+  UNWIND range(0, size(cs) - 1) AS i
+  RETURN cs[i] AS c, 'vector' AS list, i + 1 AS rank
+  UNION ALL
+  MATCH (c:Chunk)
+  SEARCH c IN (FULLTEXT INDEX chunk_text FOR $q LIMIT $k) SCORE AS s
+  WITH c, s ORDER BY s DESC, c.id
+  WITH collect(c) AS cs, collect(s) AS ss
+  UNWIND range(0, size(cs) - 1) AS i
+  RETURN cs[i] AS c, 'fulltext' AS list, i + 1 AS rank
+}
+WITH c, sum(1.0 / ($rrf + rank)) AS rrf, count(*) AS lists,
+     min(CASE list WHEN 'vector' THEN rank END) AS v_rank,
+     min(CASE list WHEN 'fulltext' THEN rank END) AS f_rank
+OPTIONAL MATCH (c)-[:ABOUT]->(co:Company)
+WITH c, rrf, lists, v_rank, f_rank, collect(co.tier) AS tiers
+// RRF scores tie constantly at small k, and an alphabetical tie-break would let an unrelated
+// semantic near-match outrank a chunk that literally contains the accession number being
+// asked for - so ties go to breadth, then to the lexical (full-text) hit.
+ORDER BY rrf DESC, lists DESC, coalesce(f_rank, 999) ASC, coalesce(v_rank, 999) ASC, c.id
+LIMIT $k
+RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accession_no,
+       rrf, lists, v_rank, f_rank, tiers
+"""
+        if not self.chunk_count():
+            return []
+        try:
+            return self._rows(statement, params)
+        except Exception as exc:
+            logger.warning("Fused search failed: %s", exc)
+            return []
 
     # ------------------------------------------------------------------
     # Seed + export
@@ -942,29 +1083,36 @@ class RelateSupplyChainGraph:
     def search_graphrag_context(self, query_text: str, query_embedding: List[float],
                                 top_k: int = 3) -> Dict[str, Any]:
         """
-        Retrieves top filing chunks by cosine similarity, then expands each ticker with
-        its Relate graph neighbourhood. Embeddings live in a JSON sidecar; the graph
-        context itself is always queried from Relate.
+        Fused vector + BM25 retrieval over the Chunk nodes in Relate, then each hit's ticker
+        is expanded with its graph neighbourhood. Everything comes from the database: there is
+        no Python-side scan of an embedding list.
         """
-        if not self.chunks or not query_embedding:
+        hits = self.hybrid_search_chunks(query_text, query_embedding, top_k=top_k)
+        chunks = [
+            {
+                "id": hit["id"],
+                "text": hit["text"],
+                "ticker": hit["ticker"],
+                "accession_no": hit["accession_no"],
+                "rrf": round(float(hit.get("rrf") or 0.0), 5),
+                "in_vector": hit.get("v_rank"),
+                "in_fulltext": hit.get("f_rank"),
+                "tiers": [t for t in (hit.get("tiers") or []) if t is not None],
+            }
+            for hit in hits
+        ]
+        # One context per ticker, in fused-rank order: the same supplier listed in three
+        # excerpts should not repeat the same neighbourhood three times.
+        seen: List[str] = []
+        for chunk in chunks:
+            ticker = chunk.get("ticker")
+            if ticker and ticker not in seen:
+                seen.append(ticker)
+        if not seen:
             mentioned = [node_id for node_id in self._node_cache
                          if node_id.lower() in (query_text or "").lower()]
-            fallback = mentioned[0] if mentioned else next(iter(self._node_cache), "NVDA")
-            return {"chunks": [], "graph_contexts": [self.get_suppliers_and_customers(fallback)]}
-
-        query_vector = np.array(query_embedding, dtype=np.float32)
-        query_norm = np.linalg.norm(query_vector) or 1.0
-
-        scored = []
-        for chunk in self.chunks:
-            chunk_vector = np.array(chunk["embedding"], dtype=np.float32)
-            chunk_norm = np.linalg.norm(chunk_vector) or 1.0
-            scored.append((float(np.dot(query_vector, chunk_vector) / (query_norm * chunk_norm)), chunk))
-
-        scored.sort(key=lambda item: item[0], reverse=True)
-        top_chunks = [chunk for _, chunk in scored[:top_k]]
-        graph_contexts = [
-            self.get_suppliers_and_customers(chunk.get("ticker", "NVDA"))
-            for chunk in top_chunks
-        ]
-        return {"chunks": top_chunks, "graph_contexts": graph_contexts}
+            seen = mentioned[:1] or list(self._node_cache)[:1]
+        return {
+            "chunks": chunks,
+            "graph_contexts": [self.get_suppliers_and_customers(t) for t in seen],
+        }
