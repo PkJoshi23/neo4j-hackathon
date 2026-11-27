@@ -169,8 +169,19 @@ st.markdown(
 
 @st.cache_resource
 def get_relate_graph():
-    """Initializes and caches the embedded Relate graph database."""
-    return RelateSupplyChainGraph()
+    """
+    Initialize and cache the embedded Relate graph.
+
+    A failed open is returned rather than raised, because Relate is embedded: it takes an exclusive
+    lock on one file for the whole life of the process, so "another copy of the app is still
+    running" is a normal condition to explain, not a traceback to plaster across the page. The
+    cache is cleared on the way out so the next reload retries instead of replaying the failure.
+    """
+    try:
+        return RelateSupplyChainGraph()
+    except Exception as exc:
+        get_relate_graph.clear()
+        return exc
 
 
 @st.cache_resource
@@ -1115,6 +1126,25 @@ def render_text_to_cypher(relate_graph, llm, height=480):
 # -----------------------------------------------------------------------------
 def main():
     relate_graph = get_relate_graph()
+    if isinstance(relate_graph, Exception):
+        locked = "lock" in str(relate_graph).lower()
+        st.error("The Relate store is already open in another process." if locked
+                 else "The Relate store could not be opened.")
+        if locked:
+            st.markdown(
+                "Relate is an **embedded** database: one file, one writer, and the lock belongs to "
+                "whoever opened it first. So this page is not broken - another copy of the app, or a "
+                "`python ingest.py` / `backfill_chunks.py` run, still holds "
+                "`supply_chain.rl`.\n\n"
+                "1. `Ctrl+C` the terminal running the other instance (closing the browser tab is not "
+                "enough - the server process is what holds the lock).\n"
+                "2. If no such terminal is open, a process from a crashed run is stale: end it in "
+                "Task Manager.\n"
+                "3. Reload this page. It retries on every reload."
+            )
+        st.caption(f"Relate reported: {relate_graph}")
+        st.stop()
+
     embedder = get_embedder()
     openai_client = get_llm_client()
     llm = SimpleLLMWrapper(openai_client)
