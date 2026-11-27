@@ -51,6 +51,9 @@ How to work:
 - For "which layer is the chokepoint", call layer_concentration: it reports each industrial
   layer's member count, which supplier carries the most buyer relationships, and how much of
   the layer is backed by a filing.
+- For a question about a stratum ("who feeds the hyperscalers", "is tier 3 thin"), call
+  graph_overview rather than counting companies yourself: tier membership and the flows between
+  tiers are already in the graph as (Company)-[:IN_TIER]->(Tier)-[:FEEDS]->(Tier).
 - An edge with no accession number was curated by hand, not read out of a filing. Say so when
   you rely on one rather than implying the SEC disclosed it.
 - Be concise: a few short paragraphs or bullets, then a short "Evidence" list.
@@ -66,10 +69,13 @@ def _tool_specs() -> List[Dict[str, Any]]:
                 "name": "graph_query",
                 "description": (
                     "Run a READ-ONLY Cypher query against the embedded Relate graph. "
-                    "Schema: (:Company {id, label, tier, tier_name, full_name, description}) "
+                    "Schema: (:Company {id, label, tier, tier_name, full_name, description, layer}) "
                     "with relationships SUPPLIES_TO, INVESTED_IN, PARTNERS_WITH "
                     "(properties: notes, source_form, accession_no, as_of, stake_pct), and "
                     "(:Filing {id, ticker, accession_no, form, filing_date}) linked by (Company)-[:FILED]->(Filing). "
+                    "The strata are nodes too: (Company)-[:IN_TIER]->(Tier {tier, name, short, color}) "
+                    "and (Tier)-[:FEEDS]->(Tier), so a tier can be matched directly instead of "
+                    "re-derived from n.tier. "
                     "Use MATCH / WHERE / RETURN / ORDER BY / LIMIT only."
                 ),
                 "parameters": {
@@ -83,7 +89,11 @@ def _tool_specs() -> List[Dict[str, Any]]:
             "type": "function",
             "function": {
                 "name": "graph_overview",
-                "description": "Graph totals: companies, relationships by type, filings by form, tier sizes.",
+                "description": (
+                    "Graph totals: companies, relationships by type, filings by form, and one row "
+                    "per architectural tier with its members, the tiers it feeds and is fed by, and "
+                    "what share of its outgoing edges cite a filing."
+                ),
                 "parameters": {"type": "object", "properties": {}},
             },
         },
@@ -190,14 +200,25 @@ class SupplyChainAgent:
         forms = self.graph._rows(
             "MATCH (f:Filing) RETURN f.form AS form, count(*) AS c ORDER BY c DESC"
         )
-        tiers = self.graph._rows(
-            "MATCH (n:Company) RETURN n.tier AS tier, count(n) AS c ORDER BY tier DESC"
-        )
+        tiers = self.graph.get_tier_summaries()
         return {
             "companies": self.graph.count_nodes(),
             "relationships": {row["type"]: row["c"] for row in types},
             "filings_by_form": {row["form"]: row["c"] for row in forms},
-            "companies_per_tier": {str(row["tier"]): row["c"] for row in tiers},
+            "tiers": [{
+                "tier": tier["tier"],
+                "name": tier["name"],
+                "members": tier.get("members", 0),
+                "tickers": tier.get("tickers") or [],
+                "feeds": tier["feeds"],
+                "fed_by": tier["fed_by"],
+                "outgoing_edges": tier["out_edges"],
+                "uncited_outgoing": tier["out_uncited"],
+                "evidence_pct": tier["evidence_pct"],
+            } for tier in tiers],
+            "read": ("feeds lists the tiers this stratum supplies, with the edge count and how many "
+                     "of those edges carry no accession number. evidence_pct covers outgoing edges "
+                     "only, because it is the supplier's own filing that names the relationship."),
         }
 
     def _tool_layer_concentration(self) -> Dict[str, Any]:

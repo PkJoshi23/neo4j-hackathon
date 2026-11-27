@@ -210,7 +210,7 @@ def main():
         model = SentenceTransformer("BAAI/bge-small-en-v1.5")
         add_companies(graph, model, new)
         print(f"\nnodes now: {graph.count_nodes()} | chunks now: {graph.chunk_count()}")
-        graph.export_json()
+        graph._persist()
         graph.store.close()
         return
 

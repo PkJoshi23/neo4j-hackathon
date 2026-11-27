@@ -307,7 +307,7 @@ def cmd_propose(graph, args):
         # The tracked snapshot is what the app seeds from on a fresh machine, so an applied
         # proposal that never reaches it exists only on this one. A scratch store must not write
         # it - the file describes the default database, whatever file is open.
-        graph.export_json()
+        graph._persist()
         print(f"snapshot rewritten: {applied} edge(s) now in supply_chain.json")
 
 

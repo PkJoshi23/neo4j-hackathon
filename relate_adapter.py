@@ -76,14 +76,26 @@ top-level tier segment segments upstream downstream direct largest biggest item 
 
 # Architectural Tier Definitions for the AI Stack View.
 # Tier -1 sits *below* equipment: the materials and specialty inputs the whole stack consumes.
+# `short` carries the line break the tier axis needs, so the gutter label and the graph node read
+# the same authored string instead of a second copy of it in the UI.
 TIER_DEFINITIONS = {
-    -1: {"name": "Tier -1: Raw Materials & Specialty Inputs", "color": "#37474F", "edge_color": "#607D8B"},
-    0: {"name": "Tier 0: Equipment, Power & Facilities", "color": "#5D4037", "edge_color": "#8D6E63"},
-    1: {"name": "Tier 1: Foundries, Packaging & Memory", "color": "#2E7D32", "edge_color": "#43A047"},
-    2: {"name": "Tier 2: AI Accelerators & Silicon Design", "color": "#1565C0", "edge_color": "#1E88E5"},
-    3: {"name": "Tier 3: AI Server Integrators & Systems", "color": "#6A1B9A", "edge_color": "#8E24AA"},
-    4: {"name": "Tier 4: Hyperscalers & AI Cloud", "color": "#E65100", "edge_color": "#FB8C00"},
+    -1: {"name": "Tier -1: Raw Materials & Specialty Inputs", "short": "Raw Materials\n& Specialty Inputs",
+         "color": "#37474F", "edge_color": "#607D8B"},
+    0: {"name": "Tier 0: Equipment, Power & Facilities", "short": "Equipment,\nPower & Cooling",
+         "color": "#5D4037", "edge_color": "#8D6E63"},
+    1: {"name": "Tier 1: Foundries, Packaging & Memory", "short": "Foundries, Packaging\n& Memory",
+         "color": "#2E7D32", "edge_color": "#43A047"},
+    2: {"name": "Tier 2: AI Accelerators & Silicon Design", "short": "AI Accelerators\n& Silicon",
+         "color": "#1565C0", "edge_color": "#1E88E5"},
+    3: {"name": "Tier 3: AI Server Integrators & Systems", "short": "Server Integrators",
+         "color": "#6A1B9A", "edge_color": "#8E24AA"},
+    4: {"name": "Tier 4: Hyperscalers & AI Cloud", "short": "Hyperscalers\n& AI Cloud",
+         "color": "#E65100", "edge_color": "#FB8C00"},
 }
+
+
+def tier_node_id(tier: int) -> str:
+    return f"TIER_{tier}"
 
 DEFAULT_TIER = 2
 
@@ -305,6 +317,7 @@ class RelateSupplyChainGraph:
         self._ensure_chunk_schema()
         self._migrate_legacy_chunks()
         self.sync_layers()
+        self.sync_tier_nodes()
         self._refresh_cache()
 
     # ------------------------------------------------------------------
@@ -702,6 +715,65 @@ class RelateSupplyChainGraph:
         )
         return len(rows)
 
+    def sync_tier_nodes(self) -> int:
+        """
+        Give the tier taxonomy a place in the graph: (:Company)-[:IN_TIER]->(:Tier) and
+        (:Tier)-[:FEEDS]->(:Tier).
+
+        Until now a tier was an integer on a company, so "what sits between the materials layer and
+        the hyperscalers" could only be answered by Python aggregation - the spine existed in the
+        code, not in the database, and a query written against the graph could not see it. Only
+        structure is stored here. Edge counts and citation coverage are derived on read by
+        get_tier_summaries, because a stored count starts lying the moment a filing is ingested.
+        """
+        owned = {row["id"]: row["tier"] for row in self._rows(
+            "MATCH (c:Company) WHERE c.tier IS NOT NULL RETURN c.id AS id, c.tier AS tier"
+        )}
+        stored = {row["c"]: row["t"] for row in self._rows(
+            "MATCH (c:Company)-[:IN_TIER]->(t:Tier) RETURN c.id AS c, t.tier AS t"
+        )}
+        have_tiers = {row["t"] for row in self._rows("MATCH (t:Tier) RETURN t.tier AS t")}
+        desired_flows = self._rows(
+            "MATCH (a:Company)-[e]->(b:Company) "
+            "WHERE a.tier IS NOT NULL AND b.tier IS NOT NULL AND a.tier <> b.tier "
+            "RETURN a.tier AS src, b.tier AS dst"
+        )
+        stored_flows = self._rows("MATCH (s:Tier)-[:FEEDS]->(d:Tier) RETURN s.tier AS src, d.tier AS dst")
+        if (owned == stored and have_tiers == set(TIER_DEFINITIONS)
+                and {(r["src"], r["dst"]) for r in desired_flows}
+                == {(r["src"], r["dst"]) for r in stored_flows}):
+            return 0
+
+        self._rows(
+            "UNWIND $rows AS r MERGE (t:Tier {id: r.id}) "
+            "SET t.tier = r.tier, t.name = r.name, t.short = r.short, t.color = r.color, "
+            "t.edge_color = r.edge_color",
+            {"rows": [{"id": tier_node_id(tier), "tier": tier, "name": meta["name"],
+                       "short": meta["short"], "color": meta["color"],
+                       "edge_color": meta["edge_color"]} for tier, meta in TIER_DEFINITIONS.items()]},
+        )
+        # A company that moved tiers keeps an edge to the tier it left unless the stale pair goes first.
+        moved = [cid for cid, tier in stored.items() if owned.get(cid) != tier]
+        if moved:
+            self._rows("UNWIND $ids AS i MATCH (c:Company {id: i})-[r:IN_TIER]->(:Tier) DELETE r",
+                       {"ids": moved})
+        self._rows(
+            "UNWIND $rows AS r MATCH (c:Company {id: r.id}) MATCH (t:Tier {tier: r.tier}) "
+            "MERGE (c)-[:IN_TIER]->(t)",
+            {"rows": [{"id": cid, "tier": tier} for cid, tier in owned.items()]},
+        )
+        self._rows("MATCH (s:Tier)-[f:FEEDS]->(d:Tier) DELETE f")
+        pairs = sorted({(r["src"], r["dst"]) for r in desired_flows})
+        if pairs:
+            self._rows(
+                "UNWIND $rows AS r MATCH (s:Tier {tier: r.src}) MATCH (d:Tier {tier: r.dst}) "
+                "MERGE (s)-[:FEEDS]->(d)",
+                {"rows": [{"src": src, "dst": dst} for src, dst in pairs]},
+            )
+        logger.info("Tier spine materialized: %d tiers, %d members, %d flows.",
+                    len(TIER_DEFINITIONS), len(owned), len(pairs))
+        return len(owned)
+
     def chunk_count(self) -> int:
         return self._rows("MATCH (c:Chunk) RETURN count(c) AS n")[0]["n"]
 
@@ -978,8 +1050,9 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
         except Exception as exc:
             logger.warning("Could not export graph JSON: %s", exc)
 
-    # Backwards-compatible name used by ingestion.
+    # Backwards-compatible name used by ingestion: refresh derived structure, then snapshot it.
     def _persist(self):
+        self.sync_tier_nodes()
         self.export_json()
 
     def import_from_json(self, path: str) -> Dict[str, int]:
@@ -1041,6 +1114,7 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
                                info.get("form", ""), info.get("filing_date", ""))
 
         self.sync_layers()
+        self.sync_tier_nodes()
         self._refresh_cache()
         return {"nodes": imported_nodes, "edges": imported_edges, "filings": len(filings)}
 
@@ -1162,6 +1236,74 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
             })
         out.sort(key=lambda item: (-item["top_supplier_buyers"], -item["load_share"]))
         return out
+
+    def get_tier_summaries(self) -> List[Dict[str, Any]]:
+        """
+        Per-tier rollup read off the tier spine: who belongs to a stratum, what it feeds, and how
+        much of that flow a filing actually supports.
+
+        Every number here is aggregated live from the company edges rather than stored on the tier
+        node, so ingesting a filing cannot leave a stale count behind. `evidence_pct` counts only
+        outgoing edges: a supplier's own disclosure is what names the relationship, so a buyer's
+        silence about a vendor does not count against the vendor's tier.
+        """
+        rows = {row["tier"]: dict(row, feeds=[], fed_by=[], out_edges=0, out_uncited=0,
+                                  in_edges=0, in_uncited=0)
+                for row in self._rows(
+                    "MATCH (t:Tier) RETURN t.tier AS tier, t.name AS name, t.short AS short, "
+                    "t.color AS color, t.edge_color AS edge_color"
+                )}
+        for row in self._rows(
+            "MATCH (t:Tier)<-[:IN_TIER]-(c:Company) "
+            "RETURN t.tier AS tier, count(c) AS members, collect(c.id) AS tickers"
+        ):
+            tier = rows.get(row["tier"])
+            if tier:
+                tier["members"] = row["members"]
+                tier["tickers"] = sorted(row["tickers"] or [])
+        for row in self._rows(
+            "MATCH (s:Tier)-[:FEEDS]->(d:Tier) "
+            "MATCH (a:Company)-[e]->(b:Company) WHERE a.tier = s.tier AND b.tier = d.tier "
+            "RETURN s.tier AS src, d.tier AS dst, count(DISTINCT a.id) AS sellers, "
+            "count(DISTINCT b.id) AS buyers, count(e) AS edges, "
+            "sum(CASE WHEN e.accession_no IS NULL THEN 1 ELSE 0 END) AS uncited"
+        ):
+            src, dst = rows.get(row["src"]), rows.get(row["dst"])
+            if src:
+                src["out_edges"] += row["edges"]
+                src["out_uncited"] += row["uncited"]
+                src["feeds"].append({"tier": row["dst"], "edges": row["edges"],
+                                     "buyers": row["buyers"], "uncited": row["uncited"]})
+            if dst:
+                dst["in_edges"] += row["edges"]
+                dst["in_uncited"] += row["uncited"]
+                dst["fed_by"].append({"tier": row["src"], "edges": row["edges"],
+                                      "sellers": row["sellers"], "uncited": row["uncited"]})
+
+        summaries = []
+        for tier in sorted(rows, reverse=True):
+            item = rows[tier]
+            item["feeds"].sort(key=lambda f: -f["edges"])
+            item["fed_by"].sort(key=lambda f: -f["edges"])
+            item["evidence_pct"] = round(100.0 * (item["out_edges"] - item["out_uncited"])
+                                         / item["out_edges"], 1) if item["out_edges"] else None
+            summaries.append(item)
+        return summaries
+
+    def tier_roster(self) -> str:
+        """
+        The tier list as one line per stratum, for prompts that describe the schema.
+
+        Hand-kept copies of this block drift the moment a company is ingested: the text-to-Cypher
+        prompt listed 32 tickers long after the graph held 47, and a model told "Tier 1: TSM, MU"
+        will answer from that sentence instead of from the data.
+        """
+        lines = []
+        for item in self.get_tier_summaries():
+            name = item.get("name", "").split(": ", 1)[-1]
+            holders = ", ".join(item.get("tickers") or [])
+            lines.append(f"- Tier {item['tier']}: {name} ({holders})")
+        return "\n".join(lines)
 
     def get_topology(self, focus_ticker: str, hops: int = 1,
                      show_components: bool = True) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:

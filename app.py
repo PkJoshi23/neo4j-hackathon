@@ -234,25 +234,24 @@ Translate the user's natural language question into a clean, read-only Cypher qu
 
 Graph Schema:
 Node Labels & Properties (listed companies only, no component/product nodes):
-- (:Company {{id, name, tier, full_name}})
+- (:Company {{id, label, tier, tier_name, full_name, description, layer}})
+- (:Tier {{tier, name, short, color}})   one node per stratum
 
 Relationship Types:
 - (:Company)-[:SUPPLIES_TO]->(:Company)
 - (:Company)-[:INVESTED_IN]->(:Company)     equity stake / investment
 - (:Company)-[:PARTNERS_WITH]->(:Company)   strategic partnership / joint venture
+- (:Company)-[:IN_TIER]->(:Tier)            the stratum a company sits in
+- (:Tier)-[:FEEDS]->(:Tier)                 money flow between strata, upstream to downstream
 
-Architectural Tiers:
-- Tier -1: Raw Materials & Specialty Inputs (CCJ, TECK, ENTG, LIN, PLAB, 4063.T, 3436.T)
-- Tier 0: Equipment, Power & Facilities (ASML, AMAT, LRCX, KLAC, VST, CEG, VRT)
-- Tier 1: Foundries, Packaging & Memory (TSM, MU, 000660.KS, LITE, COHR)
-- Tier 2: AI Accelerators & Silicon Design (NVDA, AVGO, AMD, ANET, MRVL, INTC, ALAB)
-- Tier 3: Server Integrators (SMCI, DELL, HPE)
-- Tier 4: Hyperscalers & AI Cloud (MSFT, AMZN, GOOGL, META, AAPL, ORCL, CRWV, IREN)
+Architectural Tiers (read live from the graph):
+{tier_roster}
 
 Rules:
 1. ONLY return read-only Cypher (MATCH, WHERE, RETURN, ORDER BY, LIMIT). Never CREATE, DELETE, or SET.
 2. Return source and target nodes (e.g. RETURN s, r, t or RETURN s.name, t.name).
-3. Respond ONLY with the raw Cypher query inside ```cypher ... ``` code block.
+3. To list the companies in a stratum, traverse the spine: MATCH (t:Tier {{tier: 1}})<-[:IN_TIER]-(c:Company) RETURN c.
+4. Respond ONLY with the raw Cypher query inside ```cypher ... ``` code block.
 
 User Question:
 {user_query}
@@ -278,9 +277,10 @@ Guidelines:
 """
 
 
-def generate_cypher_query(user_query: str, llm: SimpleLLMWrapper) -> str:
+def generate_cypher_query(user_query: str, llm: SimpleLLMWrapper, graph) -> str:
     """Uses DeepSeek to translate plain English into a valid Cypher query."""
-    prompt = TEXT_TO_CYPHER_PROMPT.format(user_query=user_query)
+    prompt = TEXT_TO_CYPHER_PROMPT.format(
+        user_query=user_query, tier_roster=graph.tier_roster())
     raw = llm.invoke(prompt)
     match = re.search(r"```(?:cypher)?\s*(.*?)\s*```", raw, re.DOTALL | re.IGNORECASE)
     if match:
@@ -298,15 +298,6 @@ def generate_cypher_query(user_query: str, llm: SimpleLLMWrapper) -> str:
 # Charts are laid out deterministically: every node gets an authored coordinate and
 # physics is only used to fit the canvas. That keeps the picture identical on every
 # run instead of drifting into a hairball of overlapping nodes and long edge labels.
-
-TIER_SHORT = {
-    -1: "Raw Materials\n& Specialty Inputs",
-    0: "Equipment,\nPower & Cooling",
-    1: "Foundries, Packaging\n& Memory",
-    2: "AI Accelerators\n& Silicon",
-    3: "Server Integrators",
-    4: "Hyperscalers\n& AI Cloud",
-}
 
 # Long component ids get a readable two-line chip label instead of a raw snake_case id.
 COMPONENT_LABELS = {
@@ -571,7 +562,7 @@ def _tier_axis_label(tier: int, node_count: int, y: float) -> Node:
     color = TIER_DEFINITIONS.get(tier, {}).get("color", "#546E7A")
     return Node(
         id=f"__tier_axis_{tier}",
-        label=f"TIER {tier}\n{TIER_SHORT.get(tier, '')}",
+        label=f"TIER {tier}\n{TIER_DEFINITIONS.get(tier, {}).get('short', '')}",
         shape="text",
         size=1,
         x=GUTTER_X,
@@ -748,6 +739,7 @@ def render_query_log(relate_graph, limit: int = 6) -> None:
 def render_tiered_stack(relate_graph, selected_tiers, show_components, height=680):
     """Renders the AI Stack as a tiered chart (Tier 4 top → Tier 0 bottom)."""
     nodes_dict, edges_list, tier_counts = relate_graph.get_tiered_stack(selected_tiers, show_components)
+    summaries = relate_graph.get_tier_summaries()
 
     # Top metrics bar (one column per tier, highest tier first)
     tier_order = sorted(TIER_DEFINITIONS, reverse=True)
@@ -758,6 +750,27 @@ def render_tiered_stack(relate_graph, selected_tiers, show_components, height=68
     if not nodes_dict:
         st.warning("No tiers selected. Please check at least one tier in the controls above or sidebar.")
         return
+
+    if summaries:
+        with st.expander("Per-tier rollup (read from the tier nodes)", expanded=False):
+            rows = [{
+                "Tier": item["tier"],
+                "Stratum": (item.get("short") or item.get("name") or "").replace("\n", " "),
+                "Members": item.get("members", 0),
+                "Companies": ", ".join(item.get("tickers") or []),
+                "Feeds": ", ".join(f"T{f['tier']} ({f['edges']})" for f in item["feeds"]) or "-",
+                "Fed by": ", ".join(f"T{f['tier']} ({f['edges']})" for f in item["fed_by"]) or "-",
+                "Out edges": item["out_edges"],
+                "Cited": f"{item['evidence_pct']}%" if item["evidence_pct"] is not None else "n/a",
+            } for item in summaries
+                if selected_tiers is None or item["tier"] in selected_tiers]
+            st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
+            st.caption(
+                "Every number is aggregated live from the company edges rather than stored on the "
+                "tier, so a stratum cannot report a count the graph no longer backs. 'Cited' is the "
+                "share of that tier's outgoing relationships carrying an SEC accession number; the "
+                "rest were curated by hand."
+            )
 
     _render_tiered_chart(nodes_dict, edges_list, height, with_tier_axis=True)
 
@@ -1117,7 +1130,7 @@ def render_text_to_cypher(relate_graph, llm, height=480):
     if st.button("Generate & Run Cypher", type="primary", use_container_width=True):
         if user_nl_query:
             with st.spinner("Translating English to Cypher with DeepSeek & executing on Relate..."):
-                generated_cypher = generate_cypher_query(user_nl_query, llm)
+                generated_cypher = generate_cypher_query(user_nl_query, llm, relate_graph)
                 st.markdown(f'<div class="cypher-box"><b>Generated Cypher:</b><br><code>{generated_cypher}</code></div>', unsafe_allow_html=True)
 
                 cypher_res = relate_graph.execute_cypher(generated_cypher)
@@ -1128,12 +1141,20 @@ def render_text_to_cypher(relate_graph, llm, height=480):
                     st.success(f"Matched {cypher_res['count']} graph records from Relate.")
 
                     # Subgraph visualization: same tiered chart as the AI Stack view.
-                    _render_tiered_chart(
-                        cypher_res["nodes"],
-                        cypher_res["edges"],
-                        height,
-                        with_tier_axis=True,
-                    )
+                    if cypher_res["nodes"]:
+                        _render_tiered_chart(
+                            cypher_res["nodes"],
+                            cypher_res["edges"],
+                            height,
+                            with_tier_axis=True,
+                        )
+                    else:
+                        st.info(
+                            "Rows matched, but none of them are companies - the canvas draws the "
+                            "company subgraph only, so a query over `:Tier` or `:Filing` shows up in "
+                            "the table below. Traverse back to companies (for example "
+                            "`MATCH (t:Tier {tier: 1})<-[:IN_TIER]-(c:Company) RETURN c`) to draw it."
+                        )
 
                     # Tabular display
                     with st.expander("📊 View Matched Query Records", expanded=True):
