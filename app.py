@@ -53,9 +53,19 @@ try:
 except Exception:
     pass
 
-# Ingestion is the only writer of the graph and the only reason edgartools is installed, so
-# the hosted demo turns it off with INGEST_ENABLED="false" in the secrets tab and runs read-only.
-LIVE_INGEST_ENABLED = os.getenv("INGEST_ENABLED", "true").strip().lower() not in ("false", "0", "no")
+# Ingestion is the only writer of the graph and the only reason edgartools is installed, so the
+# hosted demo turns it off in the secrets tab and runs read-only. Streamlit only copies str/int/
+# float secrets into os.environ, so a bare TOML `false` never lands there - read it as a secret too.
+def _host_flag(name):
+    if name in os.environ:
+        return os.environ[name]
+    try:
+        return st.secrets[name]
+    except Exception:
+        return "true"
+
+
+LIVE_INGEST_ENABLED = str(_host_flag("INGEST_ENABLED")).strip().lower() not in ("false", "0", "no")
 
 # --- Page Configuration ---
 st.set_page_config(
