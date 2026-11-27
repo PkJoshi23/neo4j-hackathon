@@ -230,13 +230,14 @@ class RelateStore:
 
     MAX_HISTORY = 80
 
-    def __init__(self, path: str):
+    def __init__(self, path: str, read_only: bool = False):
         if not HAS_RELATE:
             raise RuntimeError(
                 "relate-db is not installed. Install it from https://relatedb.ai "
                 "(pip install relate-db) and restart the app."
             )
         self.path = path
+        self.read_only = read_only
         self._lock = threading.Lock()
         self._history: deque = deque(maxlen=self.MAX_HISTORY)
         self._executor = ThreadPoolExecutor(max_workers=1, thread_name_prefix="relate")
@@ -247,8 +248,8 @@ class RelateStore:
 
     # -- lifecycle ---------------------------------------------------------
     def _open(self):
-        self._conn = relate.connect(self.path)
-        logger.info("Connected to embedded Relate DB at: %s", self.path)
+        self._conn = relate.connect(self.path, read_only=self.read_only)
+        logger.info("Connected to embedded Relate DB at: %s (read_only=%s)", self.path, self.read_only)
 
     def close(self):
         """Closes the native connection on its owning thread, then stops the executor."""
@@ -325,19 +326,21 @@ class RelateSupplyChainGraph:
     Cypher instead of Python dictionaries.
     """
 
-    def __init__(self, db_path: str = DEFAULT_RL_PATH):
+    def __init__(self, db_path: str = DEFAULT_RL_PATH, read_only: bool = False):
         self.db_path = db_path
+        self.read_only = read_only
         self.chunks_file = DEFAULT_CHUNKS_PATH
-        self.store = RelateStore(db_path)
+        self.store = RelateStore(db_path, read_only=read_only)
         self._node_cache: Dict[str, Dict[str, Any]] = {}
         # Compiled (name, node id, pattern) list, rebuilt whenever the node cache is reloaded.
         self._entity_index = None
-        if self.count_nodes() == 0:
-            self.seed_ai_supply_chain()
-        self._ensure_chunk_schema()
-        self._migrate_legacy_chunks()
-        self.sync_layers()
-        self.sync_tier_nodes()
+        if not read_only:
+            if self.count_nodes() == 0:
+                self.seed_ai_supply_chain()
+            self._ensure_chunk_schema()
+            self._migrate_legacy_chunks()
+            self.sync_layers()
+            self.sync_tier_nodes()
         self._refresh_cache()
 
     # ------------------------------------------------------------------
@@ -1144,7 +1147,6 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
     def get_tiered_stack(
         self,
         selected_tiers: Optional[List[int]] = None,
-        show_components: bool = True,
     ) -> Tuple[Dict[str, Any], List[Dict[str, Any]], Dict[int, int]]:
         """Tiered strata for the AI Stack view, read from Relate with Cypher."""
         tiers = selected_tiers if selected_tiers is not None else [-1, 0, 1, 2, 3, 4]
@@ -1325,8 +1327,7 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
             lines.append(f"- Tier {item['tier']}: {name} ({holders})")
         return "\n".join(lines)
 
-    def get_topology(self, focus_ticker: str, hops: int = 1,
-                     show_components: bool = True) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
+    def get_topology(self, focus_ticker: str, hops: int = 1) -> Tuple[Dict[str, Any], List[Dict[str, Any]]]:
         """Ego network around a company, traversed with Cypher."""
         focus = self.resolve_node_id(focus_ticker.upper().strip())
         if not focus:

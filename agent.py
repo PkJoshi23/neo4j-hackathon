@@ -59,8 +59,8 @@ How to work:
 """
 
 
-def _tool_specs() -> List[Dict[str, Any]]:
-    return [
+def _tool_specs(include_ingest: bool = True) -> List[Dict[str, Any]]:
+    specs = [
         {
             "type": "function",
             "function": {
@@ -159,17 +159,22 @@ def _tool_specs() -> List[Dict[str, Any]]:
             },
         },
     ]
+    if not include_ingest:
+        specs = [spec for spec in specs if spec["function"]["name"] != "ingest_company"]
+    return specs
 
 
 class SupplyChainAgent:
     """A small ReAct-style loop with explicit tool calls and an observable trace."""
 
-    def __init__(self, client, graph, embedder=None, llm_wrapper=None, model: str = "deepseek-chat"):
+    def __init__(self, client, graph, embedder=None, llm_wrapper=None, model: str = "deepseek-chat",
+                 allow_ingest: bool = True):
         self.client = client
         self.graph = graph
         self.embedder = embedder
         self.llm_wrapper = llm_wrapper
         self.model = model
+        self.allow_ingest = allow_ingest
 
     # ------------------------------------------------------------------
     # Tools
@@ -394,7 +399,7 @@ class SupplyChainAgent:
                 "max_tokens": 900,
             }
             if not force_final:
-                request["tools"] = _tool_specs()
+                request["tools"] = _tool_specs(self.allow_ingest)
                 request["tool_choice"] = "auto"
             else:
                 messages.append({

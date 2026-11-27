@@ -12,6 +12,11 @@ streamlit-agraph==0.0.45
 edgartools==6.3.0
 
 # Local HuggingFace Embeddings ($0 API Spend)
+# sentence-transformers pulls in torch, whose default PyPI wheel is the multi-GB CUDA
+# build. Streamlit Cloud has no GPU and a tight disk budget, so pin the CPU variant from
+# the PyTorch index below - same 2.12.1 release this app is verified running on.
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.12.1+cpu
 sentence-transformers==6.3.0
 numpy==2.4.6
 

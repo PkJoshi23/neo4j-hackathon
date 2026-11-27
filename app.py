@@ -13,17 +13,10 @@ Key Capabilities:
 import os
 import sys
 import types
-from pathlib import Path
 
 # --- Critical Fix for NumPy 2.x vs OpenCV (cv2) compatibility ---
 if "cv2" not in sys.modules:
     sys.modules["cv2"] = types.ModuleType("cv2")
-
-# --- Critical Windows Fix for edgartools cache ---
-LOCAL_EDGAR_DIR = (Path(__file__).parent / ".edgar_data").resolve()
-LOCAL_EDGAR_DIR.mkdir(parents=True, exist_ok=True)
-os.environ.setdefault("EDGAR_LOCAL_DATA_DIR", str(LOCAL_EDGAR_DIR))
-os.environ.setdefault("EDGAR_CACHE_DIR", str(LOCAL_EDGAR_DIR))
 
 import re
 import asyncio
@@ -52,6 +45,17 @@ except ImportError:
 from relate_adapter import RelateSupplyChainGraph, TIER_DEFINITIONS, embed_query
 
 load_dotenv()
+
+# Streamlit copies top-level secrets into os.environ, but only once something has actually
+# read st.secrets - and it raises when no secrets file exists at all (local dev).
+try:
+    list(st.secrets.keys())
+except Exception:
+    pass
+
+# Ingestion is the only writer of the graph and the only reason edgartools is installed, so
+# the hosted demo turns it off with INGEST_ENABLED="false" in the secrets tab and runs read-only.
+LIVE_INGEST_ENABLED = os.getenv("INGEST_ENABLED", "true").strip().lower() not in ("false", "0", "no")
 
 # --- Page Configuration ---
 st.set_page_config(
@@ -179,7 +183,9 @@ def get_relate_graph():
     cache is cleared on the way out so the next reload retries instead of replaying the failure.
     """
     try:
-        return RelateSupplyChainGraph()
+        # With ingestion switched off nothing in the app writes, so the hosted demo opens the
+        # store read-only: no WAL, no lock churn, no boot-time backfill of derived columns.
+        return RelateSupplyChainGraph(read_only=not LIVE_INGEST_ENABLED)
     except Exception as exc:
         get_relate_graph.clear()
         return exc
@@ -838,9 +844,9 @@ def render_query_log(relate_graph, limit: int = 6) -> None:
             st.code(query["cypher"], language="cypher")
 
 
-def render_tiered_stack(relate_graph, selected_tiers, show_components, height=680):
+def render_tiered_stack(relate_graph, selected_tiers, height=680):
     """Renders the AI Stack as a tiered chart (Tier 4 top → Tier 0 bottom)."""
-    nodes_dict, edges_list, tier_counts = relate_graph.get_tiered_stack(selected_tiers, show_components)
+    nodes_dict, edges_list, tier_counts = relate_graph.get_tiered_stack(selected_tiers)
     summaries = relate_graph.get_tier_summaries()
 
     # Top metrics bar (one column per tier, highest tier first)
@@ -877,13 +883,13 @@ def render_tiered_stack(relate_graph, selected_tiers, show_components, height=68
     _render_tiered_chart(nodes_dict, edges_list, height, with_tier_axis=True)
 
 
-def render_ego_network(relate_graph, focus_ticker, hops, show_components, height=680):
+def render_ego_network(relate_graph, focus_ticker, hops, height=680):
     """
     Renders the ego network as a left-to-right supply-chain rail:
     upstream suppliers on the left, the focus company in the middle, downstream
-    customers on the right, and components on a separate bottom row.
+    customers on the right.
     """
-    nodes_dict, edges_list = relate_graph.get_topology(focus_ticker, hops, show_components)
+    nodes_dict, edges_list = relate_graph.get_topology(focus_ticker, hops)
 
     if not nodes_dict:
         st.info(f"No graph data found for **{focus_ticker}**. Ingest filings using the sidebar widget.")
@@ -1076,7 +1082,8 @@ def _render_agent_chat(relate_graph, embedder, llm):
             with st.spinner("Agent planning · querying Relate · reading SEC filings..."):
                 from agent import SupplyChainAgent
 
-                agent = SupplyChainAgent(getattr(llm, "client", None), relate_graph, embedder, llm)
+                agent = SupplyChainAgent(getattr(llm, "client", None), relate_graph, embedder, llm,
+                                         allow_ingest=LIVE_INGEST_ENABLED)
                 result = agent.run(active_prompt)
                 st.markdown(result["answer"])
                 _render_tool_trace(result)
@@ -1348,18 +1355,6 @@ def main():
             f"**{relate_graph.count_filings()}** filings"
         )
 
-        st.header("📐 Workspace Layout")
-        layout_mode = st.radio(
-            "Display Mode:",
-            [
-                "🖥️ Full-Width Workspace (Tabs)",
-                "📑 Split-Screen (Graph + Chat)",
-            ],
-            index=0,
-            help="Full-Width Workspace gives the graph 100% screen width to avoid squashing.",
-        )
-
-        st.markdown("---")
         st.header("🎛️ Graph Parameters")
 
         graph_style = st.selectbox(
@@ -1370,12 +1365,9 @@ def main():
             ],
         )
 
-        has_components = any(info.get("type") == "Component" for info in relate_graph.nodes.values())
-
         if graph_style == "🔍 Focus Network (Ego View)":
             focus_ticker = st.text_input("Focus Ticker", value="NVDA").upper().strip()
             hops = st.slider("Supply Chain Hops", min_value=1, max_value=3, value=1)
-            show_components = has_components and st.checkbox("Include Components", value=True)
             selected_tiers = [-1, 0, 1, 2, 3, 4]
         else:
             focus_ticker = "NVDA"
@@ -1386,16 +1378,16 @@ def main():
                 t_meta = TIER_DEFINITIONS[t_idx]
                 if st.checkbox(t_meta["name"], value=True, key=f"t_check_{t_idx}"):
                     selected_tiers.append(t_idx)
-            show_components = has_components and st.checkbox(
-                "Include Components", value=True, key="ai_stack_comp"
-            )
 
         st.markdown("---")
         st.subheader("📥 Live SEC Ingestion")
         st.caption("Scans 10-K/20-F, 8-K, 13D/13G and DEF 14A with a zero-token sieve.")
-        ingest_ticker_input = st.text_input("Enter Ticker to Ingest", placeholder="e.g. TSM, ASML, MU").upper().strip()
+        ingest_ticker_input = st.text_input(
+            "Enter Ticker to Ingest", placeholder="e.g. TSM, ASML, MU",
+            disabled=not LIVE_INGEST_ENABLED,
+        ).upper().strip()
 
-        if st.button("Ingest Filing", use_container_width=True):
+        if st.button("Ingest Filing", use_container_width=True, disabled=not LIVE_INGEST_ENABLED):
             if ingest_ticker_input:
                 with st.spinner(f"Ingesting latest SEC filing for {ingest_ticker_input} into Relate..."):
                     try:
@@ -1412,6 +1404,12 @@ def main():
                         st.error(f"Ingestion failed: {e}")
             else:
                 st.warning("Please enter a valid ticker.")
+
+        if not LIVE_INGEST_ENABLED:
+            st.caption(
+                "This deployment opens Relate read-only, so new filings cannot be added here. "
+                "The 187 filings and 879 excerpts on screen were ingested by this same code path."
+            )
 
         st.markdown("---")
         st.markdown(
@@ -1435,79 +1433,60 @@ def main():
     )
 
     # =========================================================================
-    # OPTION A: FULL-WIDTH WORKSPACE (TABS) - RECOMMENDED (ZERO SQUASHING)
+    # FULL-WIDTH WORKSPACE (TABS)
     # =========================================================================
-    if layout_mode == "🖥️ Full-Width Workspace (Tabs)":
-        tab_graph, tab_chat, tab_cypher = st.tabs([
-            "🌐 Interactive Graph & AI Stack",
-            "💬 Supply Chain Agent & Analyst",
-            "🔮 Natural Language to Cypher Studio",
-        ])
+    tab_graph, tab_chat, tab_cypher = st.tabs([
+        "🌐 Interactive Graph & AI Stack",
+        "💬 Supply Chain Agent & Analyst",
+        "🔮 Natural Language to Cypher Studio",
+    ])
 
-        with tab_graph:
-            if graph_style == "🏢 The 'AI Stack' (Hierarchical Strata)":
-                st.subheader("🏢 The AI Stack: Hierarchical Supply Chain Strata (Full Width)")
-                render_tiered_stack(relate_graph, selected_tiers, show_components, height=620)
-            else:
-                st.subheader(f"🌐 Relate Topology: {focus_ticker} (Hops: {hops}) - Full Width")
-                render_ego_network(relate_graph, focus_ticker, hops, show_components, height=620)
-            render_query_log(relate_graph)
+    with tab_graph:
+        if graph_style == "🏢 The 'AI Stack' (Hierarchical Strata)":
+            st.subheader("🏢 The AI Stack: Hierarchical Supply Chain Strata (Full Width)")
+            render_tiered_stack(relate_graph, selected_tiers, height=620)
+        else:
+            st.subheader(f"🌐 Relate Topology: {focus_ticker} (Hops: {hops}) - Full Width")
+            render_ego_network(relate_graph, focus_ticker, hops, height=620)
+        render_query_log(relate_graph)
 
-            st.markdown("#### 🧱 Layer Concentration")
-            layer_rows = relate_graph.get_layer_map()
-            if layer_rows:
-                st.dataframe(
-                    [
-                        {
-                            "Layer": row["layer"],
-                            "Companies": row["members"],
-                            "Suppliers": row["suppliers_with_edges"],
-                            "Buyer links": row["supply_edges"],
-                            "Largest supplier": row["top_supplier"],
-                            "Its buyers": row["top_supplier_buyers"],
-                            "Load share": f"{int(row['load_share'] * 100)}%",
-                            "Cited by a filing": f"{row['evidence_pct']:.0f}%",
-                        }
-                        for row in layer_rows
-                    ],
-                    use_container_width=True,
-                    hide_index=True,
-                )
-                st.caption(
-                    "Load share is the fraction of that layer's buyer relationships carried by "
-                    "its single largest supplier: 80%+ means one company, not a competitive "
-                    "layer. The last column is honesty - how much of the layer is quoted from a "
-                    "filing rather than curated by hand."
-                )
-
-        with tab_chat:
-            st.subheader("💬 Supply Chain Agent & GraphRAG Analyst (Full Width)")
-            st.caption(
-                "The agent plans, runs Cypher against Relate and reads SEC filings before answering — "
-                "with its tool trace and cited accession numbers on screen."
+        st.markdown("#### 🧱 Layer Concentration")
+        layer_rows = relate_graph.get_layer_map()
+        if layer_rows:
+            st.dataframe(
+                [
+                    {
+                        "Layer": row["layer"],
+                        "Companies": row["members"],
+                        "Suppliers": row["suppliers_with_edges"],
+                        "Buyer links": row["supply_edges"],
+                        "Largest supplier": row["top_supplier"],
+                        "Its buyers": row["top_supplier_buyers"],
+                        "Load share": f"{int(row['load_share'] * 100)}%",
+                        "Cited by a filing": f"{row['evidence_pct']:.0f}%",
+                    }
+                    for row in layer_rows
+                ],
+                use_container_width=True,
+                hide_index=True,
             )
-            render_chat_interface(relate_graph, embedder, llm)
+            st.caption(
+                "Load share is the fraction of that layer's buyer relationships carried by "
+                "its single largest supplier: 80%+ means one company, not a competitive "
+                "layer. The last column is honesty - how much of the layer is quoted from a "
+                "filing rather than curated by hand."
+            )
 
-        with tab_cypher:
-            render_text_to_cypher(relate_graph, llm, height=480)
+    with tab_chat:
+        st.subheader("💬 Supply Chain Agent & GraphRAG Analyst (Full Width)")
+        st.caption(
+            "The agent plans, runs Cypher against Relate and reads SEC filings before answering — "
+            "with its tool trace and cited accession numbers on screen."
+        )
+        render_chat_interface(relate_graph, embedder, llm)
 
-    # =========================================================================
-    # OPTION B: SPLIT-SCREEN (SIDE-BY-SIDE)
-    # =========================================================================
-    else:
-        col_graph, col_chat = st.columns([1.2, 0.8], gap="medium")
-
-        with col_graph:
-            if graph_style == "🏢 The 'AI Stack' (Hierarchical Strata)":
-                st.subheader("🏢 The AI Stack (Hierarchical Strata)")
-                render_tiered_stack(relate_graph, selected_tiers, show_components, height=520)
-            else:
-                st.subheader(f"🌐 Relate Topology: {focus_ticker} (Hops: {hops})")
-                render_ego_network(relate_graph, focus_ticker, hops, show_components, height=520)
-
-        with col_chat:
-            st.subheader("💬 GraphRAG Analyst Chat")
-            render_chat_interface(relate_graph, embedder, llm)
+    with tab_cypher:
+        render_text_to_cypher(relate_graph, llm, height=480)
 
 
 if __name__ == "__main__":
