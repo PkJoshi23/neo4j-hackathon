@@ -1066,39 +1066,42 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
                 "title": f"{role.title()} (Hop {hop}): {info.get('full_name', node_id)}",
             }
 
+        # One round trip per hop, not two per company: the frontier travels as an id list. The old
+        # loop cost 73 Cypher calls to draw NVDA three hops out, and this runs on every click in the
+        # graph view. Both directions share the statement because an anchor can be on either end.
         current_layer = {focus}
         visited = {focus}
 
         for hop in range(1, max(1, hops) + 1):
-            next_layer = set()
-            for node_id in current_layer:
-                downstream = self._rows(
-                    "MATCH (a:Company {id: $id})-[r:SUPPLIES_TO]->(b:Company) "
-                    "RETURN b.id AS id, r.notes AS notes",
-                    {"id": node_id},
-                )
-                for row in downstream:
-                    add_company(row["id"], "customer", hop, "#E65100" if hop == 1 else "#FFA726")
-                    add_edge(node_id, row["id"], "SUPPLIES_TO", "#FB8C00", row.get("notes"))
-                    if row["id"] not in visited:
-                        visited.add(row["id"])
-                        next_layer.add(row["id"])
-
-                upstream = self._rows(
-                    "MATCH (a:Company)-[r:SUPPLIES_TO]->(b:Company {id: $id}) "
-                    "RETURN a.id AS id, r.notes AS notes",
-                    {"id": node_id},
-                )
-                for row in upstream:
-                    add_company(row["id"], "supplier", hop, "#2E7D32" if hop == 1 else "#66BB6A")
-                    add_edge(row["id"], node_id, "SUPPLIES_TO", "#43A047", row.get("notes"))
-                    if row["id"] not in visited:
-                        visited.add(row["id"])
-                        next_layer.add(row["id"])
-
-            current_layer = next_layer
             if not current_layer:
                 break
+            rows = self._rows(
+                "MATCH (a:Company)-[r:SUPPLIES_TO]->(b:Company) WHERE a.id IN $ids "
+                "RETURN a.id AS src, b.id AS dst, r.notes AS notes, 'out' AS dir "
+                "UNION ALL "
+                "MATCH (a:Company)-[r:SUPPLIES_TO]->(b:Company) WHERE b.id IN $ids "
+                "RETURN a.id AS src, b.id AS dst, r.notes AS notes, 'in' AS dir",
+                {"ids": sorted(current_layer)},
+            )
+            next_layer = set()
+            # Customers before suppliers, then by id, so a node reachable from several frontier
+            # members gets the same role on every render. Frontier iteration order used to decide it.
+            for direction in ("out", "in"):
+                ordered = sorted((r for r in rows if r["dir"] == direction),
+                                 key=lambda r: (r["src"], r["dst"]))
+                for row in ordered:
+                    src, dst = row["src"], row["dst"]
+                    other = dst if direction == "out" else src
+                    if direction == "out":
+                        add_company(other, "customer", hop, "#E65100" if hop == 1 else "#FFA726")
+                        add_edge(src, dst, "SUPPLIES_TO", "#FB8C00", row.get("notes"))
+                    else:
+                        add_company(other, "supplier", hop, "#2E7D32" if hop == 1 else "#66BB6A")
+                        add_edge(src, dst, "SUPPLIES_TO", "#43A047", row.get("notes"))
+                    if other not in visited:
+                        visited.add(other)
+                        next_layer.add(other)
+            current_layer = next_layer
 
         # Capital / partnership neighbours of the companies visited so far (one extra hop).
         # Both directions matter: an anchor can be the target of a partnership edge (ORCL).
@@ -1127,29 +1130,33 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
     def get_suppliers_and_customers(self, ticker: str) -> Dict[str, List[str]]:
         """Direct suppliers, customers, dependencies and capital links for a company."""
         node_id = self.resolve_node_id(ticker.upper().strip()) or ticker.upper().strip()
-        suppliers = [r["id"] for r in self._rows(
-            "MATCH (a:Company)-[:SUPPLIES_TO]->(b:Company {id: $id}) RETURN a.id AS id ORDER BY id",
-            {"id": node_id})]
-        customers = [r["id"] for r in self._rows(
-            "MATCH (a:Company {id: $id})-[:SUPPLIES_TO]->(b:Company) RETURN b.id AS id ORDER BY id",
-            {"id": node_id})]
-        investments = [r["id"] for r in self._rows(
-            "MATCH (a:Company {id: $id})-[:INVESTED_IN]->(b:Company) RETURN b.id AS id ORDER BY id",
-            {"id": node_id})]
-        invested_by = [r["id"] for r in self._rows(
-            "MATCH (a:Company)-[:INVESTED_IN]->(b:Company {id: $id}) RETURN a.id AS id ORDER BY id",
-            {"id": node_id})]
-        partners = [r["id"] for r in self._rows(
-            "MATCH (a:Company {id: $id})-[r:PARTNERS_WITH]-(b:Company) RETURN b.id AS id",
-            {"id": node_id})]
+        # Five statement kinds, one round trip. This runs once per company mentioned in a retrieved
+        # chunk, so the old shape paid five queries for every ticker in the RAG context.
+        buckets = {
+            "sup": [], "cust": [], "inv": [], "invby": [], "part": [],
+        }
+        rows = self._rows(
+            "MATCH (a:Company)-[:SUPPLIES_TO]->(b:Company {id: $id}) RETURN 'sup' AS bucket, a.id AS id "
+            "UNION ALL "
+            "MATCH (a:Company {id: $id})-[:SUPPLIES_TO]->(b:Company) RETURN 'cust' AS bucket, b.id AS id "
+            "UNION ALL "
+            "MATCH (a:Company {id: $id})-[:INVESTED_IN]->(b:Company) RETURN 'inv' AS bucket, b.id AS id "
+            "UNION ALL "
+            "MATCH (a:Company)-[:INVESTED_IN]->(b:Company {id: $id}) RETURN 'invby' AS bucket, a.id AS id "
+            "UNION ALL "
+            "MATCH (a:Company {id: $id})-[:PARTNERS_WITH]-(b:Company) RETURN 'part' AS bucket, b.id AS id",
+            {"id": node_id},
+        )
+        for row in rows:
+            buckets[row["bucket"]].append(row["id"])
         return {
             "ticker": node_id,
-            "suppliers": sorted(set(suppliers)),
-            "customers": sorted(set(customers)),
+            "suppliers": sorted(set(buckets["sup"])),
+            "customers": sorted(set(buckets["cust"])),
             "dependencies": [],
-            "investments": sorted(set(investments)),
-            "invested_by": sorted(set(invested_by)),
-            "partners": sorted(set(partners)),
+            "investments": sorted(set(buckets["inv"])),
+            "invested_by": sorted(set(buckets["invby"])),
+            "partners": sorted(set(buckets["part"])),
         }
 
     # ------------------------------------------------------------------
