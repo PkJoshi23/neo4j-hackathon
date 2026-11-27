@@ -27,6 +27,7 @@ os.environ.setdefault("EDGAR_CACHE_DIR", str(LOCAL_EDGAR_DIR))
 
 import re
 import asyncio
+from typing import Any, Dict, List, Optional
 import streamlit as st
 import pandas as pd
 from dotenv import load_dotenv
@@ -232,25 +233,18 @@ TEXT_TO_CYPHER_PROMPT = """
 You are an expert Cypher query generator for Relate by Neo4j (Cypher 25).
 Translate the user's natural language question into a clean, read-only Cypher query.
 
-Graph Schema:
-Node Labels & Properties (listed companies only, no component/product nodes):
-- (:Company {{id, label, tier, tier_name, full_name, description, layer}})
-- (:Tier {{tier, name, short, color}})   one node per stratum
+Schema, reported by the store right now (labels with their properties, then relationship types):
+{schema}
 
-Relationship Types:
-- (:Company)-[:SUPPLIES_TO]->(:Company)
-- (:Company)-[:INVESTED_IN]->(:Company)     equity stake / investment
-- (:Company)-[:PARTNERS_WITH]->(:Company)   strategic partnership / joint venture
-- (:Company)-[:IN_TIER]->(:Tier)            the stratum a company sits in
-- (:Tier)-[:FEEDS]->(:Tier)                 money flow between strata, upstream to downstream
-
-Architectural Tiers (read live from the graph):
+Architectural tiers, read live from the graph:
 {tier_roster}
 
 Rules:
-1. ONLY return read-only Cypher (MATCH, WHERE, RETURN, ORDER BY, LIMIT). Never CREATE, DELETE, or SET.
-2. Return source and target nodes (e.g. RETURN s, r, t or RETURN s.name, t.name).
-3. To list the companies in a stratum, traverse the spine: MATCH (t:Tier {{tier: 1}})<-[:IN_TIER]-(c:Company) RETURN c.
+1. ONLY read-only Cypher (MATCH, WHERE, RETURN, ORDER BY, LIMIT, WITH, DISTINCT, count, collect).
+   The app refuses CREATE, MERGE, SET, DELETE and CALL before a statement reaches the store.
+2. Use ONLY the properties listed above. One that is not listed does not exist: Relate answers null
+   for it rather than raising, so a WHERE or ORDER BY on it silently does nothing.
+3. Return whole nodes (RETURN s, r, t) when a chart helps - the canvas draws :Company nodes.
 4. Respond ONLY with the raw Cypher query inside ```cypher ... ``` code block.
 
 User Question:
@@ -277,19 +271,127 @@ Guidelines:
 """
 
 
-def generate_cypher_query(user_query: str, llm: SimpleLLMWrapper, graph) -> str:
-    """Uses DeepSeek to translate plain English into a valid Cypher query."""
-    prompt = TEXT_TO_CYPHER_PROMPT.format(
-        user_query=user_query, tier_roster=graph.tier_roster())
-    raw = llm.invoke(prompt)
+CYPHER_CORRECTION_PROMPT = """
+You are fixing a Cypher query you already wrote. It ran against Relate by Neo4j and failed.
+
+Original question:
+{user_query}
+
+Your query:
+```cypher
+{failed}
+```
+
+What went wrong: {reason}
+
+The schema the store reports:
+{schema}
+
+Architectural tiers:
+{tier_roster}
+
+Rewrite it so it runs and answers the question with fields that exist. Same rules: read-only, only
+the listed properties, and no invented field to force a result. If the store genuinely cannot answer
+this, write the query that demonstrates the gap (for example MATCH (c:Company) WHERE c.tier = 9
+RETURN c LIMIT 1) instead of substituting a different question. Respond ONLY with the corrected
+Cypher inside a ```cypher ... ``` block.
+"""
+
+CYPHER_MAX_ATTEMPTS = 3
+_LLM_UNAVAILABLE = ("DeepSeek API key is not configured", "LLM Generation Error")
+
+
+def extract_cypher(raw: str) -> Optional[str]:
+    """Pull a statement out of the model's reply, or None when it did not write one.
+
+    The old fallback here was a generic SUPPLIES_TO query, so a model that refused or a missing API
+    key still drew a chart - of something unrelated to the question. Returning None lets the studio
+    say it produced nothing instead.
+    """
+    if not raw or raw.startswith(_LLM_UNAVAILABLE):
+        return None
     match = re.search(r"```(?:cypher)?\s*(.*?)\s*```", raw, re.DOTALL | re.IGNORECASE)
     if match:
-        return match.group(1).strip()
-    lines = [line.strip() for line in raw.split("\n") if line.strip() and not line.startswith("#")]
-    for line in lines:
+        return match.group(1).strip() or None
+    for line in raw.split("\n"):
+        line = line.strip()
         if line.upper().startswith("MATCH"):
             return line
-    return "MATCH (s)-[r:SUPPLIES_TO]->(c) RETURN s, r, c LIMIT 25"
+    return None
+
+
+def generate_cypher_query(user_query: str, llm: SimpleLLMWrapper, graph,
+                          schema: Optional[str] = None,
+                          tier_roster: Optional[str] = None) -> Optional[str]:
+    """Uses DeepSeek to translate plain English into a Cypher query the schema supports."""
+    prompt = TEXT_TO_CYPHER_PROMPT.format(
+        user_query=user_query,
+        schema=schema or graph.schema_block(),
+        tier_roster=tier_roster or graph.tier_roster(),
+    )
+    return extract_cypher(llm.invoke(prompt))
+
+
+def run_cypher_with_correction(user_query: str, llm: SimpleLLMWrapper, graph,
+                               max_attempts: int = CYPHER_MAX_ATTEMPTS) -> Dict[str, Any]:
+    """
+    Generate, run, and if the store objects, generate again with the failure in front of the model.
+
+    Measured on ten questions: DeepSeek produced no syntax errors at all, yet "which companies filed
+    a 13G on Nvidia" came back as an INVESTED_IN query with zero rows, and "suppliers of TSMC ordered
+    by filing date" returned nine rows sorted by `r.filing_date` - edges carry `as_of`, so Relate
+    handed back nulls and the ORDER BY silently did nothing. A rejected query is loud; a wrong one
+    that renders a confident table is not. So three outcomes count as failure here: refused, empty,
+    and rows whose filters name properties the store does not have.
+    """
+    profile = graph.schema_profile()
+    schema = graph.schema_block(profile)
+    roster = graph.tier_roster()
+    query = generate_cypher_query(user_query, llm, graph, schema=schema, tier_roster=roster)
+    trail: List[Dict[str, Any]] = []
+    result: Dict[str, Any] = {}
+
+    for attempt in range(1, max_attempts + 1):
+        if not query:
+            return {"trail": trail, "result": {}, "query": None, "attempts": attempt - 1,
+                    "error": "No Cypher came back - the model wrote no query block, which is what "
+                             "happens when DEEPSEEK_API_KEY is unset or the call fails. The graph "
+                             "views do not need it; this studio does."}
+        result = graph.execute_cypher(query, profile=profile)
+        gaps = result.get("property_gaps") or []
+        if result.get("status") == "error":
+            outcome = "error"
+            reason = "Relate rejected it: " + result["message"].splitlines()[0].strip()
+        elif result.get("empty"):
+            outcome = "empty"
+            reason = "It ran and matched nothing" + (
+                " - it reads properties the store does not have: "
+                + ", ".join(g["ref"] for g in gaps) if gaps else "") + "."
+        elif gaps:
+            outcome = "gaps"
+            reason = ("It returned rows, but these are not stored: "
+                      + "; ".join(f"{g['ref']} on {g['bound_to']}" for g in gaps)
+                      + " - so any filter or ordering that used them did nothing.")
+        else:
+            trail.append({"attempt": attempt, "query": query, "outcome": "ok",
+                          "reason": f"{result['count']} row(s) matched.",
+                          "rows": result["count"]})
+            return {"trail": trail, "result": result, "query": query,
+                    "attempts": attempt, "corrected": attempt > 1}
+
+        trail.append({"attempt": attempt, "query": query, "outcome": outcome,
+                      "reason": reason, "rows": result.get("count", 0)})
+        if attempt >= max_attempts:
+            break
+        fixed = extract_cypher(llm.invoke(CYPHER_CORRECTION_PROMPT.format(
+            user_query=user_query, failed=query, reason=reason,
+            schema=schema, tier_roster=roster)))
+        if not fixed or fixed.strip().lower() == query.strip().lower():
+            break   # no key, or the model repeated itself: a third try is only latency
+        query = fixed
+
+    return {"trail": trail, "result": result, "query": query,
+            "attempts": len(trail), "corrected": len(trail) > 1}
 
 
 # -----------------------------------------------------------------------------
@@ -1108,6 +1210,29 @@ def _render_graphrag_chat(relate_graph, embedder, llm):
                 )
 
 
+def render_attempt_trail(trail: List[Dict[str, Any]]) -> None:
+    """
+    Show every generated query and why the earlier ones were not good enough.
+
+    Hiding the retries would make the loop look like luck. The rejected attempts are the evidence
+    that the studio checks the store instead of trusting the model.
+    """
+    if not trail:
+        return
+    if len(trail) > 1:
+        st.caption(f"The studio ran {len(trail)} attempts. Each one below carries the failure the "
+                   "model was given before it wrote the next query.")
+    for step in trail:
+        badge = {"ok": "accepted", "error": "rejected by Relate",
+                 "empty": "matched nothing", "gaps": "named a property that is not stored"}[step["outcome"]]
+        if step["outcome"] == "ok":
+            with st.expander(f"Attempt {step['attempt']} - {badge} ({step['rows']} rows)", expanded=False):
+                st.code(step["query"], language="cypher")
+            continue
+        st.error(f"**Attempt {step['attempt']} - {badge}.** {step['reason']}")
+        st.code(step["query"], language="cypher")
+
+
 def render_text_to_cypher(relate_graph, llm, height=480):
     """Renders the Natural Language to Cypher studio."""
     st.subheader("🔮 Natural Language to Cypher Studio (Text-to-Graph)")
@@ -1121,6 +1246,8 @@ def render_text_to_cypher(relate_graph, llm, height=480):
             "Which companies has NVIDIA invested in?",
             "Show all suppliers and partners of NVIDIA",
             "Which equipment and cooling suppliers feed into Tier 1 and 3?",
+            "Which companies filed a 13G on Nvidia, and when?",
+            "Show the suppliers of TSMC ordered by filing date",
         ],
     )
 
@@ -1129,16 +1256,34 @@ def render_text_to_cypher(relate_graph, llm, height=480):
 
     if st.button("Generate & Run Cypher", type="primary", use_container_width=True):
         if user_nl_query:
-            with st.spinner("Translating English to Cypher with DeepSeek & executing on Relate..."):
-                generated_cypher = generate_cypher_query(user_nl_query, llm, relate_graph)
-                st.markdown(f'<div class="cypher-box"><b>Generated Cypher:</b><br><code>{generated_cypher}</code></div>', unsafe_allow_html=True)
+            with st.spinner("Translating, executing, and self-correcting against Relate..."):
+                outcome = run_cypher_with_correction(user_nl_query, llm, relate_graph)
+                render_attempt_trail(outcome["trail"])
+                cypher_res = outcome.get("result") or {}
 
-                cypher_res = relate_graph.execute_cypher(generated_cypher)
-
-                if cypher_res.get("status") == "error":
-                    st.error(f"Relate rejected the generated query — {cypher_res['message']}")
-                elif cypher_res["count"] > 0:
-                    st.success(f"Matched {cypher_res['count']} graph records from Relate.")
+                if outcome.get("error"):
+                    st.error(outcome["error"])
+                elif cypher_res.get("status") == "error":
+                    st.error("Relate still refuses it - the reasons above are what it said each time.")
+                elif not cypher_res.get("count"):
+                    st.warning(
+                        f"No records after {len(outcome['trail'])} attempt(s). That is a finding, not a "
+                        "glitch: the graph holds nothing these queries can name. Add the company or the "
+                        "filing in the ingestion panel, or ask about what is stored."
+                    )
+                else:
+                    st.success(
+                        f"Matched {cypher_res['count']} graph records from Relate"
+                        + ("." if len(outcome["trail"]) == 1
+                           else f" - corrected on attempt {len(outcome['trail'])}.")
+                    )
+                    if cypher_res.get("property_gaps"):
+                        st.warning(
+                            "Read this table with care: "
+                            + ", ".join(f"`{gap['ref']}`" for gap in cypher_res["property_gaps"])
+                            + " is not a property the store has, so any filter or ordering that named it "
+                            "did nothing. The rows themselves are real."
+                        )
 
                     # Subgraph visualization: same tiered chart as the AI Stack view.
                     if cypher_res["nodes"]:
@@ -1162,8 +1307,6 @@ def render_text_to_cypher(relate_graph, llm, height=480):
                         st.dataframe(df, use_container_width=True)
 
                     render_query_log(relate_graph, limit=4)
-                else:
-                    st.warning("No records matched the generated Cypher query.")
         else:
             st.warning("Please enter a question or select a preset.")
 

@@ -17,16 +17,11 @@ import json
 import logging
 import re
 import time
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List
 
-from relate_adapter import embed_query
+from relate_adapter import embed_query, read_only_violation
 
 logger = logging.getLogger(__name__)
-
-READ_ONLY_FORBIDDEN = re.compile(
-    r"\b(CREATE|MERGE|DELETE|DETACH|SET|REMOVE|DROP|LOAD|FOREACH|CALL|ALTER|GRANT)\b",
-    re.IGNORECASE,
-)
 
 SYSTEM_PROMPT = """You are a Senior AI Supply Chain Equity Research Analyst agent.
 
@@ -42,6 +37,9 @@ How to work:
   search_filings for "what evidence supports this".
 - Be economical: prefer ONE well-targeted query over exploratory ones, and stop at three
   tool calls unless the evidence you need is genuinely missing.
+- When graph_query reports an error, a property gap, or zero rows, it also returns the live schema.
+  Rewrite the statement against that schema and retry once. Never re-run the same query unchanged,
+  and never report a result whose filter or ORDER BY used a property the store does not have.
 - Never invent a company, relationship, number or quote. If the tools do not show it, say
   plainly that it is not in the graph or the ingested filings.
 - Cite evidence with the filing form + accession number + date exactly as the tools return it.
@@ -179,19 +177,36 @@ class SupplyChainAgent:
     def _tool_graph_query(self, cypher: str) -> Dict[str, Any]:
         if not cypher or not cypher.strip():
             return {"error": "empty Cypher"}
-        if READ_ONLY_FORBIDDEN.search(cypher):
-            return {"error": "Rejected: graph_query is read-only (no CREATE/MERGE/SET/DELETE)."}
+        violation = read_only_violation(cypher)
+        if violation:
+            return {"error": f"Rejected: {violation} - graph_query is read-only. Rewrite it as MATCH / RETURN."}
         result = self.graph.execute_cypher(cypher)
         if result.get("status") == "error":
-            return {"error": result["message"]}
+            # A parse error the model cannot see the schema for is a wasted turn. Hand back what the
+            # store actually holds so the next call is a correction rather than another guess.
+            return {"error": result["message"], "schema": self.graph.schema_block()}
         records = result["records"]
-        return {
+        out = {
             "rows": len(records),
             "records": records[:10],
             "truncated": len(records) > 10,
             "matched_nodes": len(result["nodes"]),
             "matched_edges": len(result["edges"]),
         }
+        if result.get("property_gaps"):
+            out["property_gaps"] = [
+                f"{gap['ref']} does not exist on {gap['bound_to']} "
+                f"(available: {', '.join(gap['available']) or 'none'})"
+                for gap in result["property_gaps"]
+            ]
+            out["warning"] = ("Those properties are not stored, so Relate returned nulls for them and "
+                              "any filter or ORDER BY that used one is meaningless. Do not present the "
+                              "result as if it were sorted or filtered.")
+        if not records:
+            out["note"] = ("Nothing matched. Check the property names above before concluding the "
+                           "graph lacks the data - and if it genuinely does, say so.")
+            out["schema"] = self.graph.schema_block()
+        return out
 
     def _tool_graph_overview(self) -> Dict[str, Any]:
         types = self.graph._rows(

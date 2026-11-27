@@ -136,6 +136,26 @@ def infer_tier(node_id: str, node_type: str = "Company") -> int:
     return TICKER_TIERS.get(key, DEFAULT_TIER)
 
 
+# Anything that can change the store. The text-to-Cypher studio and the agent's graph_query tool are
+# both LLM-written, and "the prompt told it to stay read-only" is not a boundary: one hallucinated
+# SET would edit the demo database the audience is looking at.
+WRITE_KEYWORDS = ("CREATE", "MERGE", "DELETE", "DETACH", "SET", "REMOVE", "DROP",
+                  "ALTER", "GRANT", "LOAD", "CALL", "FOREACH")
+_WRITE_KEYWORD = re.compile(r"\b(" + "|".join(WRITE_KEYWORDS) + r")\b", re.IGNORECASE)
+_QUOTED = re.compile(r"'[^']*'|\"[^\"]*\"")
+
+
+def read_only_violation(cypher: str) -> Optional[str]:
+    """
+    Return the write keyword found in a statement, or None if it is safe to run.
+
+    Literals are blanked first: searching descriptions for the phrase "offset set" is a read, and a
+    guard that refuses it teaches the studio's users to route around the guard.
+    """
+    match = _WRITE_KEYWORD.search(_QUOTED.sub("''", cypher or ""))
+    return match.group(1).upper() if match else None
+
+
 # `tier` is depth in the money flow; `layer` is the industrial segment. A reader asking "which
 # layer of the photonics stack is single-source" needs the segment, and without it that question
 # can only be answered by eyeballing the topology. Unknown tickers get no layer rather than a
@@ -1449,9 +1469,121 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
     # ------------------------------------------------------------------
     # Natural language to Cypher
     # ------------------------------------------------------------------
-    def execute_cypher(self, cypher_query: str) -> Dict[str, Any]:
-        """Executes arbitrary read-only Cypher on Relate and builds a visual subgraph."""
+    def schema_profile(self) -> Dict[str, Any]:
+        """
+        What the store actually holds, discovered by asking the store.
+
+        Both prompts described the schema by hand and both had drifted: the studio prompt promised a
+        `name` property the nodes never carried, and it did not mention `:Filing` at all, so
+        "which companies filed a 13G on Nvidia" became an INVESTED_IN query that returned nothing and
+        looked like an answer. Four statements, ~10 ms, no cache: an ingest changes what exists and a
+        stale profile is the exact bug this prevents.
+        """
+        labels: Dict[str, Dict[str, Any]] = {}
+        for row in self._rows("MATCH (n) UNWIND labels(n) AS label RETURN label, count(*) AS n"):
+            labels[row["label"]] = {"label": row["label"], "count": row["n"], "properties": set()}
+        for row in self._rows(
+            "MATCH (n) RETURN DISTINCT labels(n) AS l, keys(n) AS k LIMIT 400"
+        ):
+            for label in row.get("l") or []:
+                if label in labels:
+                    labels[label]["properties"].update(row.get("k") or [])
+
+        rels: Dict[tuple, Dict[str, Any]] = {}
+        for row in self._rows(
+            "MATCH (a)-[r]->(b) RETURN type(r) AS t, labels(a) AS la, labels(b) AS lb, count(r) AS n"
+        ):
+            rels[row["t"]] = {"type": row["t"], "from": row.get("la") or [],
+                              "to": row.get("lb") or [], "count": row["n"], "properties": set()}
+        for row in self._rows("MATCH ()-[r]->() RETURN DISTINCT type(r) AS t, keys(r) AS k LIMIT 400"):
+            if row["t"] in rels:
+                rels[row["t"]]["properties"].update(row.get("k") or [])
+
+        for item in list(labels.values()) + list(rels.values()):
+            item["properties"] = sorted(item["properties"] - {"embedding"})
+        # The value sets a model cannot guess. Filing.form holds 'SC 13G', so a query for '13G'
+        # matches nothing and still looks like an answer; the same goes for the layer names.
+        for label, prop, limit in (("Filing", "form", 12), ("Company", "layer", 14)):
+            if label not in labels:
+                continue
+            values = self._rows(
+                f"MATCH (n:{label}) WHERE n.{prop} IS NOT NULL "
+                f"RETURN n.{prop} AS v, count(*) AS n ORDER BY n DESC LIMIT {limit}"
+            )
+            if values:
+                labels[label].setdefault("values", {})[prop] = [
+                    (row["v"], row["n"]) for row in values]
+        return {"labels": [labels[k] for k in sorted(labels)],
+                "relationships": [rels[k] for k in sorted(rels)]}
+
+    def schema_block(self, profile: Optional[Dict[str, Any]] = None) -> str:
+        """The profile as prompt lines, so no schema sentence is ever typed twice."""
+        profile = profile or self.schema_profile()
+        nodes = []
+        for item in profile["labels"]:
+            line = "- (:%s) %d node(s): %s" % (item["label"], item["count"],
+                                              ", ".join(item["properties"]) or "no properties")
+            for prop, values in (item.get("values") or {}).items():
+                line += "\n    %s.%s holds: %s" % (
+                    item["label"], prop, ", ".join(f"{v!r} ({n})" for v, n in values))
+            nodes.append(line)
+        rels = [
+            "- (:%s)-[:%s]->(:%s) %d relationship(s): %s" % (
+                "/".join(rel["from"]), rel["type"], "/".join(rel["to"]), rel["count"],
+                ", ".join(rel["properties"]) or "no properties")
+            for rel in profile["relationships"]
+        ]
+        return "\n".join(nodes + [""] + rels)
+
+    def property_gaps(self, cypher: str,
+                      profile: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
+        """
+        Properties a query reads that the store does not carry.
+
+        Relate answers these with nulls instead of an error, which is the worst possible failure:
+        `ORDER BY r.filing_date` on edges that store `as_of` returned nine rows in an arbitrary
+        order, and the studio showed a confident table. Empty results and parse errors are loud;
+        this is the class that is silent, so it gets checked by name against the live profile.
+        """
+        profile = profile or self.schema_profile()
+        node_props = {item["label"]: set(item["properties"]) for item in profile["labels"]}
+        rel_props = {rel["type"]: set(rel["properties"]) for rel in profile["relationships"]}
+
+        bound: Dict[str, str] = {}
+        for alias, label in re.findall(r"\(\s*([A-Za-z_]\w*)\s*:\s*([A-Za-z]\w*)", cypher):
+            bound[alias] = label
+        for alias, rel in re.findall(r"\[\s*([A-Za-z_]\w*)\s*:\s*([A-Z][A-Z_]*)", cypher):
+            bound[alias] = rel
+
+        gaps: List[Dict[str, Any]] = []
+        seen = set()
+        for alias, prop in re.findall(r"\b([A-Za-z_]\w*)\.([A-Za-z_]\w*)\b(?!\s*\()", cypher):
+            name = bound.get(alias)
+            if not name:
+                continue
+            known = node_props[name] if name in node_props else rel_props.get(name)
+            if known is None or prop in known or (alias, prop) in seen:
+                continue
+            seen.add((alias, prop))
+            gaps.append({"ref": f"{alias}.{prop}", "bound_to": name, "available": sorted(known)})
+        return gaps
+    def execute_cypher(self, cypher_query: str,
+                       profile: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Executes read-only Cypher on Relate and builds a visual subgraph."""
         clean_query = cypher_query.strip().rstrip(";")
+        violation = read_only_violation(clean_query)
+        if violation:
+            logger.warning("Refused a %s statement on the read-only Cypher path.", violation)
+            return {
+                "status": "error",
+                "message": (f"Refused: {violation} - this path only reads the graph, so a generated "
+                            "query cannot edit the store."),
+                "refused": True,
+                "records": [],
+                "nodes": {},
+                "edges": [],
+                "count": 0,
+            }
         logger.info("Executing Cypher on Relate: %s", clean_query)
         try:
             records = self._rows(clean_query)
@@ -1505,6 +1637,8 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
             "nodes": nodes_dict,
             "edges": edges_list,
             "count": len(records),
+            "empty": not records,
+            "property_gaps": self.property_gaps(clean_query, profile or self.schema_profile()),
         }
 
     def _collect_node_ids(self, records: List[Dict[str, Any]]) -> set:
