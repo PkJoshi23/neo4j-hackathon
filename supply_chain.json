@@ -6,6 +6,7 @@
       "type": "Company",
       "tier": 0,
       "tier_name": "Tier 0: Equipment, Power & Facilities",
+      "layer": "Fab Equipment & Metrology",
       "full_name": "ASML Holding",
       "description": "EUV Lithography Systems"
     },
@@ -15,6 +16,7 @@
       "type": "Company",
       "tier": 0,
       "tier_name": "Tier 0: Equipment, Power & Facilities",
+      "layer": "Servers, Cooling & Facilities",
       "full_name": "Vertiv Holdings",
       "description": "Liquid Cooling & Power Infrastructure"
     },
@@ -24,6 +26,7 @@
       "type": "Company",
       "tier": 1,
       "tier_name": "Tier 1: Foundries, Packaging & Memory",
+      "layer": "Foundry & Advanced Packaging",
       "full_name": "Taiwan Semiconductor (TSMC)",
       "description": "Pure-play Foundry & CoWoS Packaging"
     },
@@ -33,6 +36,7 @@
       "type": "Company",
       "tier": 1,
       "tier_name": "Tier 1: Foundries, Packaging & Memory",
+      "layer": "Memory & HBM",
       "full_name": "Micron Technology",
       "description": "High Bandwidth Memory (HBM3e)"
     },
@@ -42,6 +46,7 @@
       "type": "Company",
       "tier": 1,
       "tier_name": "Tier 1: Foundries, Packaging & Memory",
+      "layer": "Memory & HBM",
       "full_name": "SK Hynix",
       "description": "High Bandwidth Memory (HBM3e)"
     },
@@ -51,6 +56,7 @@
       "type": "Company",
       "tier": 2,
       "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "Accelerators & Switch Silicon",
       "full_name": "NVIDIA",
       "description": "AI Superchips (Hopper & Blackwell)"
     },
@@ -60,6 +66,7 @@
       "type": "Company",
       "tier": 2,
       "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "Accelerators & Switch Silicon",
       "full_name": "Broadcom",
       "description": "Custom AI ASICs & Networking Silicon"
     },
@@ -69,6 +76,7 @@
       "type": "Company",
       "tier": 2,
       "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "Accelerators & Switch Silicon",
       "full_name": "Advanced Micro Devices",
       "description": "AI Accelerators (MI300X/MI325X)"
     },
@@ -78,6 +86,7 @@
       "type": "Company",
       "tier": 2,
       "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "Accelerators & Switch Silicon",
       "full_name": "Arista Networks",
       "description": "AI Data Center Switching & Optics"
     },
@@ -87,6 +96,7 @@
       "type": "Company",
       "tier": 3,
       "tier_name": "Tier 3: AI Server Integrators & Systems",
+      "layer": "Servers, Cooling & Facilities",
       "full_name": "Super Micro Computer",
       "description": "AI Server Integrator & Direct Liquid Cooling"
     },
@@ -96,6 +106,7 @@
       "type": "Company",
       "tier": 4,
       "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "layer": "Cloud & AI Demand",
       "full_name": "Microsoft",
       "description": "Azure AI Cloud & Copilot"
     },
@@ -105,6 +116,7 @@
       "type": "Company",
       "tier": 4,
       "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "layer": "Cloud & AI Demand",
       "full_name": "Amazon AWS",
       "description": "AWS Cloud Infrastructure & Trainium"
     },
@@ -114,6 +126,7 @@
       "type": "Company",
       "tier": 4,
       "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "layer": "Cloud & AI Demand",
       "full_name": "Alphabet / Google",
       "description": "Google Cloud & TPU Infrastructure"
     },
@@ -123,6 +136,7 @@
       "type": "Company",
       "tier": 4,
       "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "layer": "Cloud & AI Demand",
       "full_name": "Meta Platforms",
       "description": "Meta AI Infrastructure & Llama"
     },
@@ -132,6 +146,7 @@
       "type": "Company",
       "tier": 4,
       "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "layer": "Cloud & AI Demand",
       "full_name": "Apple",
       "description": "Apple Intelligence Private Cloud Compute"
     },
@@ -141,6 +156,7 @@
       "type": "Company",
       "tier": 4,
       "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "layer": "Cloud & AI Demand",
       "full_name": null,
       "description": null
     },
@@ -150,6 +166,7 @@
       "type": "Company",
       "tier": 1,
       "tier_name": "Tier 1: Foundries, Packaging & Memory",
+      "layer": "Optics, Lasers & Photonics",
       "full_name": null,
       "description": null
     },
@@ -159,6 +176,7 @@
       "type": "Company",
       "tier": 2,
       "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "Accelerators & Switch Silicon",
       "full_name": null,
       "description": null
     },
@@ -168,6 +186,7 @@
       "type": "Company",
       "tier": 2,
       "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "Foundry & Advanced Packaging",
       "full_name": null,
       "description": null
     },
@@ -177,6 +196,7 @@
       "type": "Company",
       "tier": 4,
       "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "layer": "Cloud & AI Demand",
       "full_name": null,
       "description": null
     },
@@ -186,6 +206,7 @@
       "type": "Company",
       "tier": 4,
       "tier_name": "Tier 4: Hyperscalers & AI Cloud",
+      "layer": "Cloud & AI Demand",
       "full_name": null,
       "description": null
     },
@@ -195,6 +216,7 @@
       "type": "Company",
       "tier": 0,
       "tier_name": "Tier 0: Equipment, Power & Facilities",
+      "layer": "Power, Grid & Fuel",
       "full_name": null,
       "description": null
     },
@@ -204,6 +226,7 @@
       "type": "Company",
       "tier": 0,
       "tier_name": "Tier 0: Equipment, Power & Facilities",
+      "layer": "Power, Grid & Fuel",
       "full_name": null,
       "description": null
     },
@@ -213,6 +236,7 @@
       "type": "Company",
       "tier": 0,
       "tier_name": "Tier 0: Equipment, Power & Facilities",
+      "layer": "Fab Equipment & Metrology",
       "full_name": null,
       "description": null
     },
@@ -222,6 +246,7 @@
       "type": "Company",
       "tier": 0,
       "tier_name": "Tier 0: Equipment, Power & Facilities",
+      "layer": "Fab Equipment & Metrology",
       "full_name": null,
       "description": null
     },
@@ -231,6 +256,7 @@
       "type": "Company",
       "tier": 0,
       "tier_name": "Tier 0: Equipment, Power & Facilities",
+      "layer": "Fab Equipment & Metrology",
       "full_name": null,
       "description": null
     },
@@ -240,6 +266,7 @@
       "type": "Company",
       "tier": 1,
       "tier_name": "Tier 1: Foundries, Packaging & Memory",
+      "layer": "Optics, Lasers & Photonics",
       "full_name": null,
       "description": null
     },
@@ -249,6 +276,7 @@
       "type": "Company",
       "tier": 2,
       "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "Optics, Lasers & Photonics",
       "full_name": null,
       "description": null
     },
@@ -258,6 +286,7 @@
       "type": "Company",
       "tier": 3,
       "tier_name": "Tier 3: AI Server Integrators & Systems",
+      "layer": "Servers, Cooling & Facilities",
       "full_name": null,
       "description": null
     },
@@ -267,6 +296,7 @@
       "type": "Company",
       "tier": 3,
       "tier_name": "Tier 3: AI Server Integrators & Systems",
+      "layer": "Servers, Cooling & Facilities",
       "full_name": null,
       "description": null
     },
@@ -276,6 +306,7 @@
       "type": "Company",
       "tier": -1,
       "tier_name": "Tier -1: Raw Materials & Specialty Inputs",
+      "layer": "Materials & Substrates",
       "full_name": "Teck Resources",
       "description": "Copper & germanium byproduct"
     },
@@ -285,6 +316,7 @@
       "type": "Company",
       "tier": -1,
       "tier_name": "Tier -1: Raw Materials & Specialty Inputs",
+      "layer": "Power, Grid & Fuel",
       "full_name": "Cameco",
       "description": "Uranium fuel for nuclear generation"
     },
@@ -294,6 +326,7 @@
       "type": "Company",
       "tier": -1,
       "tier_name": "Tier -1: Raw Materials & Specialty Inputs",
+      "layer": "Materials & Substrates",
       "full_name": "Entegris",
       "description": "Fab materials, filtration & contamination control"
     },
@@ -303,6 +336,7 @@
       "type": "Company",
       "tier": -1,
       "tier_name": "Tier -1: Raw Materials & Specialty Inputs",
+      "layer": "Materials & Substrates",
       "full_name": "Linde",
       "description": "Industrial gases (nitrogen, helium, neon)"
     },
@@ -312,6 +346,7 @@
       "type": "Company",
       "tier": -1,
       "tier_name": "Tier -1: Raw Materials & Specialty Inputs",
+      "layer": "Materials & Substrates",
       "full_name": "Photronics",
       "description": "Photomasks for wafer lithography"
     },
@@ -321,6 +356,7 @@
       "type": "Company",
       "tier": -1,
       "tier_name": "Tier -1: Raw Materials & Specialty Inputs",
+      "layer": "Materials & Substrates",
       "full_name": "Shin-Etsu Chemical",
       "description": "Silicon wafers, photoresist, quartz"
     },
@@ -330,8 +366,109 @@
       "type": "Company",
       "tier": -1,
       "tier_name": "Tier -1: Raw Materials & Specialty Inputs",
+      "layer": "Materials & Substrates",
       "full_name": "SUMCO",
       "description": "Silicon wafers"
+    },
+    "GFS": {
+      "id": "GFS",
+      "label": "GFS",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "Foundry & Advanced Packaging",
+      "full_name": "GLOBALFOUNDRIES Inc.",
+      "description": null
+    },
+    "TER": {
+      "id": "TER",
+      "label": "TER",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "Test & Inspection",
+      "full_name": "TERADYNE, INC",
+      "description": null
+    },
+    "ARM": {
+      "id": "ARM",
+      "label": "ARM",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "EDA, IP & Design",
+      "full_name": "ARM HOLDINGS PLC /UK",
+      "description": null
+    },
+    "AAOI": {
+      "id": "AAOI",
+      "label": "AAOI",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "Optics, Lasers & Photonics",
+      "full_name": "APPLIED OPTOELECTRONICS, INC.",
+      "description": null
+    },
+    "CRDO": {
+      "id": "CRDO",
+      "label": "CRDO",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "Optics, Lasers & Photonics",
+      "full_name": "Credo Technology Group Holding Ltd",
+      "description": null
+    },
+    "SNPS": {
+      "id": "SNPS",
+      "label": "SNPS",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "EDA, IP & Design",
+      "full_name": "SYNOPSYS INC",
+      "description": null
+    },
+    "STM": {
+      "id": "STM",
+      "label": "STM",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "Optics, Lasers & Photonics",
+      "full_name": "STMicroelectronics N.V.",
+      "description": null
+    },
+    "UMC": {
+      "id": "UMC",
+      "label": "UMC",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "Foundry & Advanced Packaging",
+      "full_name": "UNITED MICROELECTRONICS CORP",
+      "description": null
+    },
+    "TSEM": {
+      "id": "TSEM",
+      "label": "TSEM",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "Foundry & Advanced Packaging",
+      "full_name": "TOWER SEMICONDUCTOR LTD",
+      "description": null
+    },
+    "CDNS": {
+      "id": "CDNS",
+      "label": "CDNS",
+      "type": "Company",
+      "tier": 2,
+      "tier_name": "Tier 2: AI Accelerators & Silicon Design",
+      "layer": "EDA, IP & Design",
+      "full_name": null,
+      "description": null
     }
   },
   "edges": [
@@ -343,7 +480,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "VRT",
@@ -353,7 +491,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "VRT",
@@ -363,7 +502,30 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
+    },
+    {
+      "source": "TSM",
+      "target": "INTC",
+      "type": "SUPPLIES_TO",
+      "notes": "supplier-side relationship per 10-K",
+      "source_form": "10-K",
+      "accession_no": "0000050863-26-000011",
+      "as_of": "2026-01-23",
+      "stake_pct": null,
+      "evidence": "To the extent there is any interruption in the supply of tiles manufactured by TSMC or any other third-party foundry supplier, whether as a result of a dispute or otherwise, we would be unable to complete assembly of complete products requiring such tiles until such time as we could design and manufacture replacement tiles and source such tiles from an alternative supplier, which would likely invo"
+    },
+    {
+      "source": "TSM",
+      "target": "CRDO",
+      "type": "SUPPLIES_TO",
+      "notes": "supplier-side relationship per 10-K",
+      "source_form": "10-K",
+      "accession_no": "0001628280-26-043303",
+      "as_of": "2026-06-15",
+      "stake_pct": null,
+      "evidence": "TSMC, with the assembly and testing processes outsourced to other subcontractors primarily in Asia."
     },
     {
       "source": "TSM",
@@ -373,7 +535,8 @@
       "source_form": "10-K",
       "accession_no": "0001736297-26-000010",
       "as_of": "2026-02-20",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "TSM",
@@ -383,7 +546,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "TSM",
@@ -393,7 +557,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "TSM",
@@ -403,7 +568,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "TSM",
@@ -413,7 +579,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "MU",
@@ -423,7 +590,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "000660.KS",
@@ -433,7 +601,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -443,7 +612,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -453,7 +623,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -463,7 +634,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -473,7 +645,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -483,7 +656,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -493,7 +667,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -503,7 +678,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -513,7 +689,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -523,7 +700,8 @@
       "source_form": "8-K",
       "accession_no": "0001045810-26-000088",
       "as_of": "2026-11-17",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -533,7 +711,8 @@
       "source_form": "8-K",
       "accession_no": "0001045810-26-000088",
       "as_of": "2026-11-17",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -543,7 +722,8 @@
       "source_form": "8-K",
       "accession_no": "0001045810-26-000088",
       "as_of": "2026-11-17",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -553,7 +733,8 @@
       "source_form": "8-K",
       "accession_no": "0001045810-26-000088",
       "as_of": "2026-11-17",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -563,7 +744,8 @@
       "source_form": "8-K",
       "accession_no": "0001045810-26-000088",
       "as_of": "2026-11-17",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -573,7 +755,8 @@
       "source_form": "8-K",
       "accession_no": "0001045810-26-000088",
       "as_of": "2026-11-17",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "NVDA",
@@ -583,7 +766,8 @@
       "source_form": "DEF 14A",
       "accession_no": "0001104659-26-060253",
       "as_of": "2026-05-13",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "AVGO",
@@ -593,7 +777,8 @@
       "source_form": "DEF 14A",
       "accession_no": "0001193125-26-158942",
       "as_of": "2026-04-16",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "AVGO",
@@ -603,7 +788,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "AVGO",
@@ -613,7 +799,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "AMD",
@@ -623,7 +810,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "ANET",
@@ -633,7 +821,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "ANET",
@@ -643,7 +832,19 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
+    },
+    {
+      "source": "ANET",
+      "target": "ARM",
+      "type": "PARTNERS_WITH",
+      "notes": "partnership relationship per 8-K",
+      "source_form": "8-K",
+      "accession_no": "0001596532-26-000252",
+      "as_of": "2026-11-03",
+      "stake_pct": null,
+      "evidence": "\u2022 In partnership with AMD, Arm, Broadcom, d-Matrix, Meta, Microsoft, and Qualcomm, Arista launched open standards-based rack-scale architectures for scale-up and scale-out AI networks."
     },
     {
       "source": "ANET",
@@ -653,7 +854,8 @@
       "source_form": "8-K",
       "accession_no": "0001596532-26-000252",
       "as_of": "2026-11-03",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "ANET",
@@ -663,7 +865,8 @@
       "source_form": "8-K",
       "accession_no": "0001596532-26-000252",
       "as_of": "2026-11-03",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "ANET",
@@ -673,7 +876,8 @@
       "source_form": "8-K",
       "accession_no": "0001596532-26-000252",
       "as_of": "2026-11-03",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "ANET",
@@ -683,7 +887,8 @@
       "source_form": "8-K",
       "accession_no": "0001596532-26-000252",
       "as_of": "2026-11-03",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "SMCI",
@@ -693,7 +898,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "SMCI",
@@ -703,7 +909,19 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
+    },
+    {
+      "source": "MSFT",
+      "target": "AMD",
+      "type": "SUPPLIES_TO",
+      "notes": "supplier-side relationship per 10-K",
+      "source_form": "10-K",
+      "accession_no": "0000002488-26-000018",
+      "as_of": "2026-02-04",
+      "stake_pct": null,
+      "evidence": "With respect to our graphics products, we depend in part on Microsoft to design and develop its operating system to run on or support our graphics products."
     },
     {
       "source": "AMZN",
@@ -713,7 +931,8 @@
       "source_form": "8-K",
       "accession_no": "0001018724-26-000038",
       "as_of": "2026-10-29",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "AMZN",
@@ -723,7 +942,8 @@
       "source_form": "8-K",
       "accession_no": "0001018724-26-000038",
       "as_of": "2026-10-29",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "AMZN",
@@ -733,7 +953,8 @@
       "source_form": "8-K",
       "accession_no": "0001018724-26-000038",
       "as_of": "2026-10-29",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "IREN",
@@ -743,7 +964,8 @@
       "source_form": "8-K",
       "accession_no": "0001878848-26-000065",
       "as_of": "2026-11-05",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "IREN",
@@ -753,7 +975,8 @@
       "source_form": "8-K",
       "accession_no": "0001878848-26-000065",
       "as_of": "2026-11-05",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "MRVL",
@@ -763,7 +986,8 @@
       "source_form": "DEF 14A",
       "accession_no": "0001104659-26-060253",
       "as_of": "2026-05-13",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "MRVL",
@@ -773,7 +997,8 @@
       "source_form": "8-K",
       "accession_no": "0001193125-26-442758",
       "as_of": "2026-11-02",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "INTC",
@@ -783,7 +1008,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "INTC",
@@ -793,7 +1019,8 @@
       "source_form": "8-K",
       "accession_no": "0000050863-26-000188",
       "as_of": "2026-10-29",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "VST",
@@ -803,7 +1030,8 @@
       "source_form": "DEF 14A",
       "accession_no": "0001628280-26-019029",
       "as_of": "2026-03-18",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "VST",
@@ -813,7 +1041,8 @@
       "source_form": "DEF 14A",
       "accession_no": "0001628280-26-019029",
       "as_of": "2026-03-18",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "CEG",
@@ -823,7 +1052,8 @@
       "source_form": "DEF 14A",
       "accession_no": "0001552781-26-000140",
       "as_of": "2026-03-19",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "CEG",
@@ -833,7 +1063,8 @@
       "source_form": "8-K",
       "accession_no": "0001868275-26-000116",
       "as_of": "2026-11-09",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "CEG",
@@ -843,7 +1074,8 @@
       "source_form": "8-K",
       "accession_no": "0001868275-26-000116",
       "as_of": "2026-11-09",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "AMAT",
@@ -853,7 +1085,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "LRCX",
@@ -863,7 +1096,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "KLAC",
@@ -873,7 +1107,8 @@
       "source_form": "10-K",
       "accession_no": "0000319201-26-000027",
       "as_of": "2026-08-06",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "COHR",
@@ -883,7 +1118,52 @@
       "source_form": "10-K",
       "accession_no": "0000820318-26-000020",
       "as_of": "2026-08-14",
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
+    },
+    {
+      "source": "ALAB",
+      "target": "INTC",
+      "type": "PARTNERS_WITH",
+      "notes": "partnership relationship per 8-K",
+      "source_form": "8-K",
+      "accession_no": "0001736297-26-000044",
+      "as_of": "2026-11-03",
+      "stake_pct": null,
+      "evidence": "the plans and potential success of our announced and ongoing collaborations, partnerships and strategic relationships, including our warrant agreement with Amazon and our collaborations with AMD, Intel and NVIDIA;"
+    },
+    {
+      "source": "ALAB",
+      "target": "AMZN",
+      "type": "PARTNERS_WITH",
+      "notes": "partnership relationship per 8-K",
+      "source_form": "8-K",
+      "accession_no": "0001736297-26-000044",
+      "as_of": "2026-11-03",
+      "stake_pct": null,
+      "evidence": "the plans and potential success of our announced and ongoing collaborations, partnerships and strategic relationships, including our warrant agreement with Amazon and our collaborations with AMD, Intel and NVIDIA;"
+    },
+    {
+      "source": "ALAB",
+      "target": "AMD",
+      "type": "PARTNERS_WITH",
+      "notes": "partnership relationship per 8-K",
+      "source_form": "8-K",
+      "accession_no": "0001736297-26-000044",
+      "as_of": "2026-11-03",
+      "stake_pct": null,
+      "evidence": "the plans and potential success of our announced and ongoing collaborations, partnerships and strategic relationships, including our warrant agreement with Amazon and our collaborations with AMD, Intel and NVIDIA;"
+    },
+    {
+      "source": "ALAB",
+      "target": "NVDA",
+      "type": "PARTNERS_WITH",
+      "notes": "partnership relationship per 8-K",
+      "source_form": "8-K",
+      "accession_no": "0001736297-26-000044",
+      "as_of": "2026-11-03",
+      "stake_pct": null,
+      "evidence": "the plans and potential success of our announced and ongoing collaborations, partnerships and strategic relationships, including our warrant agreement with Amazon and our collaborations with AMD, Intel and NVIDIA;"
     },
     {
       "source": "TECK",
@@ -893,7 +1173,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "CCJ",
@@ -903,7 +1184,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "ENTG",
@@ -913,7 +1195,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "LIN",
@@ -923,7 +1206,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "PLAB",
@@ -933,7 +1217,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "4063.T",
@@ -943,7 +1228,8 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
     },
     {
       "source": "3436.T",
@@ -953,7 +1239,129 @@
       "source_form": null,
       "accession_no": null,
       "as_of": null,
-      "stake_pct": null
+      "stake_pct": null,
+      "evidence": null
+    },
+    {
+      "source": "GFS",
+      "target": "AMD",
+      "type": "SUPPLIES_TO",
+      "notes": "supplier-side relationship per 10-K",
+      "source_form": "10-K",
+      "accession_no": "0000002488-26-000018",
+      "as_of": "2026-02-04",
+      "stake_pct": null,
+      "evidence": "We rely on Taiwan Semiconductor Manufacturing Company Limited (TSMC) for the production of all wafers for microprocessor and GPU products at 7 nanometer (nm) or smaller nodes, and we rely primarily on GLOBALFOUNDRIES Inc."
+    },
+    {
+      "source": "AAOI",
+      "target": "ORCL",
+      "type": "SUPPLIES_TO",
+      "notes": "customer-side relationship per 10-K",
+      "source_form": "10-K",
+      "accession_no": "0001437749-26-005875",
+      "as_of": "2026-02-26",
+      "stake_pct": null,
+      "evidence": "In 2025, 2024 and 2023, Microsoft accounted for 28.8%, 43.7% and 46.6% of our revenue, respectively, and in 2024, Oracle accounted for 12.4% of our revenue."
+    },
+    {
+      "source": "AAOI",
+      "target": "MSFT",
+      "type": "SUPPLIES_TO",
+      "notes": "customer-side relationship per 10-K",
+      "source_form": "10-K",
+      "accession_no": "0001437749-26-005875",
+      "as_of": "2026-02-26",
+      "stake_pct": null,
+      "evidence": "In 2025, 2024 and 2023, Microsoft accounted for 28.8%, 43.7% and 46.6% of our revenue, respectively, and in 2024, Oracle accounted for 12.4% of our revenue."
+    },
+    {
+      "source": "CRDO",
+      "target": "ORCL",
+      "type": "PARTNERS_WITH",
+      "notes": "partnership relationship per 10-K",
+      "source_form": "10-K",
+      "accession_no": "0001628280-26-043303",
+      "as_of": "2026-06-15",
+      "stake_pct": null,
+      "evidence": "We partnered with Oracle to develop our ZeroFlap Optics that helps address the reliability issues known as Link Flap which plague commodity options in AI data centers enabling faster AI cluster turn on and time to first revenue."
+    },
+    {
+      "source": "SNPS",
+      "target": "MSFT",
+      "type": "PARTNERS_WITH",
+      "notes": "partnership relationship per 10-K",
+      "source_form": "10-K",
+      "accession_no": "0000883241-25-000028",
+      "as_of": "2025-12-22",
+      "stake_pct": null,
+      "evidence": "Our Synopsys Cloud offering provides customers additional options for accessing our EDA products in their own cloud environments and in the industry\u2019s first EDA Software-as-a-Service solution developed in partnership with Microsoft Azure."
+    },
+    {
+      "source": "STM",
+      "target": "AAPL",
+      "type": "SUPPLIES_TO",
+      "notes": "customer-side relationship per 20-F",
+      "source_form": "20-F",
+      "accession_no": "0000932787-26-000009",
+      "as_of": "2026-02-26",
+      "stake_pct": null,
+      "evidence": "Our major customers include (in alphabetical order) Apple, Bosch, Continental, Denso, HP, Mobileye, Samsung, SpaceX, Tesla and Vitesco."
+    },
+    {
+      "source": "UMC",
+      "target": "AMD",
+      "type": "SUPPLIES_TO",
+      "notes": "supplier-side relationship per 10-K",
+      "source_form": "10-K",
+      "accession_no": "0000002488-26-000018",
+      "as_of": "2026-02-04",
+      "stake_pct": null,
+      "evidence": "Moreover, we rely on TSMC, UMC and our other foundries to produce wafers with competitive performance attributes for our IC products."
+    },
+    {
+      "source": "UMC",
+      "target": "CDNS",
+      "type": "PARTNERS_WITH",
+      "notes": "partnership relationship per 20-F",
+      "source_form": "20-F",
+      "accession_no": "0001193125-26-193757",
+      "as_of": "2026-04-30",
+      "stake_pct": null,
+      "evidence": "We and Cadence Design Systems collaborate on certification of analog/mixed-signal flow for 28HPC+ process."
+    },
+    {
+      "source": "UMC",
+      "target": "INTC",
+      "type": "PARTNERS_WITH",
+      "notes": "partnership relationship per 20-F",
+      "source_form": "20-F",
+      "accession_no": "0001193125-26-193757",
+      "as_of": "2026-04-30",
+      "stake_pct": null,
+      "evidence": "We are also collaborating with Intel on the 12nm FinFET process to be manufactured in the United States."
+    },
+    {
+      "source": "TSEM",
+      "target": "CDNS",
+      "type": "PARTNERS_WITH",
+      "notes": "partnership relationship per 20-F",
+      "source_form": "20-F",
+      "accession_no": "0001178913-26-002318",
+      "as_of": "2026-04-30",
+      "stake_pct": null,
+      "evidence": "To support these activities, we collaborate with leading design automation providers - including Cadence Design Systems, Synopsys, Siemens EDA, and Keysight Technologies - and license standard cells, I/O, and memory IP from Synopsys, eMemory, and other top suppliers of physical IP."
+    },
+    {
+      "source": "TSEM",
+      "target": "SNPS",
+      "type": "PARTNERS_WITH",
+      "notes": "partnership relationship per 20-F",
+      "source_form": "20-F",
+      "accession_no": "0001178913-26-002318",
+      "as_of": "2026-04-30",
+      "stake_pct": null,
+      "evidence": "To support these activities, we collaborate with leading design automation providers - including Cadence Design Systems, Synopsys, Siemens EDA, and Keysight Technologies - and license standard cells, I/O, and memory IP from Synopsys, eMemory, and other top suppliers of physical IP."
     }
   ],
   "filings": {
@@ -1114,7 +1522,7 @@
     "AMD_0000002488-26-000021": {
       "id": "AMD_0000002488-26-000021",
       "ticker": "AMD",
-      "accession_no": "0000002488-26-000021",
+      "accession_no": "0000002488-26-000018",
       "form": "10-K",
       "filing_date": "2026-02-04"
     },
@@ -2195,6 +2603,76 @@
       "accession_no": "0001104659-24-021712",
       "form": "SC 13G",
       "filing_date": "2024-02-13"
+    },
+    "AMD_0000002488-26-000018": {
+      "id": "AMD_0000002488-26-000018",
+      "ticker": "AMD",
+      "accession_no": "0000002488-26-000018",
+      "form": "10-K",
+      "filing_date": "2026-02-04"
+    },
+    "GFS_0001709048-26-000022": {
+      "id": "GFS_0001709048-26-000022",
+      "ticker": "GFS",
+      "accession_no": "0001709048-26-000022",
+      "form": "20-F",
+      "filing_date": "2026-02-27"
+    },
+    "TER_0001193125-26-059002": {
+      "id": "TER_0001193125-26-059002",
+      "ticker": "TER",
+      "accession_no": "0001193125-26-059002",
+      "form": "10-K",
+      "filing_date": "2026-02-19"
+    },
+    "ARM_0001973239-26-000097": {
+      "id": "ARM_0001973239-26-000097",
+      "ticker": "ARM",
+      "accession_no": "0001973239-26-000097",
+      "form": "20-F",
+      "filing_date": "2026-05-26"
+    },
+    "AAOI_0001437749-26-005875": {
+      "id": "AAOI_0001437749-26-005875",
+      "ticker": "AAOI",
+      "accession_no": "0001437749-26-005875",
+      "form": "10-K",
+      "filing_date": "2026-02-26"
+    },
+    "CRDO_0001628280-26-043303": {
+      "id": "CRDO_0001628280-26-043303",
+      "ticker": "CRDO",
+      "accession_no": "0001628280-26-043303",
+      "form": "10-K",
+      "filing_date": "2026-06-15"
+    },
+    "SNPS_0000883241-25-000028": {
+      "id": "SNPS_0000883241-25-000028",
+      "ticker": "SNPS",
+      "accession_no": "0000883241-25-000028",
+      "form": "10-K",
+      "filing_date": "2025-12-22"
+    },
+    "STM_0000932787-26-000009": {
+      "id": "STM_0000932787-26-000009",
+      "ticker": "STM",
+      "accession_no": "0000932787-26-000009",
+      "form": "20-F",
+      "filing_date": "2026-02-26"
+    },
+    "UMC_0001193125-26-193757": {
+      "id": "UMC_0001193125-26-193757",
+      "ticker": "UMC",
+      "accession_no": "0001193125-26-193757",
+      "form": "20-F",
+      "filing_date": "2026-04-30"
+    },
+    "TSEM_0001178913-26-002318": {
+      "id": "TSEM_0001178913-26-002318",
+      "ticker": "TSEM",
+      "accession_no": "0001178913-26-002318",
+      "form": "20-F",
+      "filing_date": "2026-04-30"
     }
   }
 }
