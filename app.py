@@ -1033,10 +1033,27 @@ def _render_graphrag_chat(relate_graph, embedder, llm):
                     text = ch.get("text", "")
                     label = " / ".join(str(part) for part in (
                         ch.get("ticker"), ch.get("form"), ch.get("as_of")) if part) or "unknown issuer"
-                    sec_lines.append(f"Excerpt {idx+1} ({label}, accession {ch.get('accession_no')}):\n{text}")
-                    audit_lines.append(f"**SEC Filing Excerpt {idx+1} ({label}):**\n> {text}\n")
+                    cosine = ch.get("similarity")
+                    confidence = f", cosine {cosine:.3f}" if isinstance(cosine, (int, float)) else ""
+                    sec_lines.append(
+                        f"Excerpt {idx+1} ({label}, accession {ch.get('accession_no')}{confidence}):\n{text}")
+                    audit_lines.append(f"**SEC Filing Excerpt {idx+1} ({label}{confidence}):**\n> {text}\n")
 
-                sec_context_str = "\n\n".join(sec_lines) if sec_lines else "No specific filing excerpt matched."
+                unknown_names = rag_data.get("unknown_entities") or []
+                if sec_lines:
+                    sec_context_str = "\n\n".join(sec_lines)
+                elif unknown_names:
+                    # The honest answer to a question about a company nobody has ingested.
+                    sec_context_str = (
+                        "No ingested filing mentions " + ", ".join(unknown_names) + ". It has not "
+                        "been ingested, so say that plainly instead of describing a different "
+                        "company's disclosures as if they were its own."
+                    )
+                else:
+                    sec_context_str = (
+                        "No filing excerpt cleared the relevance threshold for this question. State "
+                        "that the graph holds no evidence for it rather than answering anyway."
+                    )
 
                 graph_lines = []
                 for gc in graph_contexts:
@@ -1059,6 +1076,15 @@ def _render_graphrag_chat(relate_graph, embedder, llm):
 
                 ai_text = llm.invoke(full_prompt)
                 audit_report = "\n".join(audit_lines) if audit_lines else "Direct Relate graph query executed."
+
+                if unknown_names:
+                    st.warning(
+                        "Not in the graph: " + ", ".join(f"`{name}`" for name in unknown_names)
+                        + " - no filing has been ingested for them, so nothing below is sourced "
+                        "from their filings. Add the ticker in the ingestion panel to change that."
+                    )
+                elif not retrieved_chunks:
+                    st.info("No filing excerpt cleared the relevance threshold for this question.")
 
                 st.markdown(ai_text)
                 with st.expander("🔍 SEC Citations & Relate Graph Context"):

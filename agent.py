@@ -238,9 +238,19 @@ class SupplyChainAgent:
                 query_embedding = embed_query(self.embedder, query)
             except Exception as exc:
                 logger.warning("Could not embed the search query: %s", exc)
-        hits = self.graph.hybrid_search_chunks(query, query_embedding, top_k=k)
+        entities = self.graph.find_entities(query)
+        hits = self.graph.hybrid_search_chunks(query, query_embedding, top_k=k,
+                                               tickers=entities[:2] or None)
+        unknown = self.graph.unindexed_entities(query)
         if not hits:
-            return {"results": [], "note": "No filing excerpt matches this query."}
+            # Saying "nothing matched" is the useful answer. Without it the model fills the gap
+            # with whatever company it already has in context.
+            note = "No filing excerpt matches this query."
+            if unknown:
+                note += (f" {', '.join(unknown)} is not in the graph - no filing has been ingested "
+                         "for it, so answer from what is stored or say you do not know.")
+            return {"results": [], "note": note, "companies_named": entities,
+                    "not_in_graph": unknown}
         return {"results": [
             {
                 "ticker": hit.get("ticker"),
@@ -249,12 +259,14 @@ class SupplyChainAgent:
                 "filed": hit.get("as_of"),
                 "heading": hit.get("heading"),
                 "rrf": round(float(hit.get("rrf") or 0.0), 5),
-                "found_by": "vector+fulltext" if hit.get("lists", 0) > 1 else (
-                    "fulltext" if hit.get("v_rank") is None else "vector"),
+                "similarity": hit.get("v_score"),
+                "found_by": "entity-scope+vector" if hit.get("ticker") in entities else (
+                    "vector+fulltext" if hit.get("lists", 0) > 1 else (
+                        "fulltext" if hit.get("v_rank") is None else "vector")),
                 "excerpt": (hit.get("text") or "")[:350],
             }
             for hit in hits
-        ]}
+        ], "companies_named": entities, "not_in_graph": unknown}
 
     def _tool_ingest_company(self, ticker: str) -> Dict[str, Any]:
         symbol = (ticker or "").upper().strip()

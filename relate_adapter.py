@@ -21,6 +21,8 @@ from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any, Dict, List, Optional, Tuple
 
+from entities import KNOWN_ALIASES
+
 logger = logging.getLogger(__name__)
 
 try:
@@ -48,9 +50,29 @@ QUERY_INSTRUCTION = "Represent this sentence for searching relevant passages: "
 def embed_query(embedder, text: str) -> List[float]:
     """Embed a retrieval query the way the checkpoint was trained to be asked."""
     return list(embedder.encode(QUERY_INSTRUCTION + str(text)).tolist())
+
+
 # Reciprocal Rank Fusion constant: dampens the gap between rank 1 and rank 2 so a chunk
 # that both indexes like has more pull than one that tops a single list.
 RRF_K = 60
+
+# Cosine gate on what counts as evidence. Measured against the live corpus: off-topic questions
+# ("tell me about the coffee machine in the lobby", "how do I reset my password", "zzz banana
+# flute") top out at 0.785, while every real supply-chain question bottomed at 0.819. RRF cannot
+# express "nothing matched" - the best of five unrelated chunks still scores 1/(60+1) - so without
+# this gate the model is handed confident-looking excerpts from the wrong company and answers them.
+MIN_VECTOR_SIM = 0.80
+
+# Words a question opens with that are never a company name. Capitalised-sentence-start is the
+# only thing marking them, and an advisory "X is not in the graph" naming the word "Which" is
+# worse than saying nothing.
+NAME_STOPWORDS = frozenset("""
+what which who whose whom why how when where does do did is are was were can could should would
+will tell show describe explain list give compare any some all the a an and but for from with
+about my our its their it they this that these those filing filings company companies stock peer
+sector supply supplies customer customers risk risks quarter year revenue margins main key
+top-level tier segment segments upstream downstream direct largest biggest item exhibit section
+""".split())
 
 # Architectural Tier Definitions for the AI Stack View.
 # Tier -1 sits *below* equipment: the materials and specialty inputs the whole stack consumes.
@@ -276,6 +298,8 @@ class RelateSupplyChainGraph:
         self.chunks_file = DEFAULT_CHUNKS_PATH
         self.store = RelateStore(db_path)
         self._node_cache: Dict[str, Dict[str, Any]] = {}
+        # Compiled (name, node id, pattern) list, rebuilt whenever the node cache is reloaded.
+        self._entity_index = None
         if self.count_nodes() == 0:
             self.seed_ai_supply_chain()
         self._ensure_chunk_schema()
@@ -311,6 +335,7 @@ class RelateSupplyChainGraph:
             for row in rows
             if row.get("id")
         }
+        self._entity_index = None
 
     @property
     def nodes(self) -> Dict[str, Dict[str, Any]]:
@@ -359,18 +384,111 @@ class RelateSupplyChainGraph:
         return re.sub(r"[^a-z0-9]+", "", str(name).lower())
 
     def resolve_node_id(self, name: str) -> Optional[str]:
-        """Maps a free-text entity name onto an existing node id (case-insensitive)."""
-        if not name:
-            return None
-        row = self._rows("MATCH (n:Company {id: $id}) RETURN n.id AS id LIMIT 1", {"id": name})
-        if row:
-            return row[0]["id"]
+        """
+        Maps a free-text entity name onto an existing node id.
 
-        key = self._canonical_key(name)
+        Exact id, then the curated alias table, then any spelling the graph itself carries. That is
+        what lets "TSMC", "Taiwan Semiconductor" and "Taiwan Semiconductor (TSMC)" all land on the
+        TSM node instead of being reported as an unknown company. The database is consulted last so
+        a node written seconds ago, before the cache reloads, still resolves.
+        """
+        raw = (name or "").strip()
+        if not raw:
+            return None
+        if raw in self._node_cache:
+            return raw
+        # Someone copying a label out of the graph view pastes "Taiwan Semiconductor (TSMC)", which
+        # is two names and matches neither spelling on its own.
+        variants = [raw] + [p.strip(" ,.&-'\"") for p in re.split(r"[(/,]", raw) if p.strip()]
+        keys = {self._canonical_key(v) for v in variants}
+        for variant in variants:
+            target = KNOWN_ALIASES.get(variant.lower())
+            if target and target in self._node_cache:
+                return target
         for node_id in self._node_cache:
-            if self._canonical_key(node_id) == key:
+            if self._canonical_key(node_id) in keys:
                 return node_id
-        return None
+        for candidate, node_id, _ in self._names():
+            if self._canonical_key(candidate) in keys:
+                return node_id
+        row = self._rows("MATCH (n:Company {id: $id}) RETURN n.id AS id LIMIT 1", {"id": raw})
+        return row[0]["id"] if row else None
+
+    def _names(self):
+        """
+        Every spelling a question could use for a company, longest first, as (name, id, pattern).
+
+        Two sources: the curated alias table and the names already stored on the nodes, so a ticker
+        ingested next week resolves without anyone editing a table. Aliases whose target is not a
+        node are skipped on purpose - "samsung" should read as unknown rather than quietly becoming
+        a company that happens to be in the graph.
+        """
+        if self._entity_index is not None:
+            return self._entity_index
+        pairs: Dict[str, str] = {}
+
+        def offer(raw_name, node_id):
+            # "Taiwan Semiconductor (TSMC)" is one name in a filing and two in a question.
+            for part in re.split(r"[(/]", str(raw_name or "")):
+                name = part.strip(" ,.&-'\"").lower()
+                if len(name) >= 3 and name not in pairs:
+                    pairs[name] = node_id
+
+        for node_id, info in self._node_cache.items():
+            for raw_name in (node_id, info.get("label"), info.get("full_name")):
+                offer(raw_name, node_id)
+        for alias, node_id in KNOWN_ALIASES.items():
+            if node_id in self._node_cache:
+                offer(alias, node_id)
+
+        self._entity_index = [
+            (name, node_id, re.compile(r"(?<![a-z0-9])" + re.escape(name) + r"(?![a-z0-9])"))
+            for name, node_id in sorted(pairs.items(), key=lambda kv: (-len(kv[0]), kv[0]))
+        ]
+        return self._entity_index
+
+    def find_entities(self, text: str) -> List[str]:
+        """
+        Node ids for companies named in free text, ordered by where they first appear.
+
+        Capitalisation is used as a precision rule, not a formality: the alias table deliberately
+        contains plain English words ("meta", "coherent", "azure"), so a question that capitalises
+        its proper nouns must not treat those words as companies mid-sentence. A question typed
+        entirely in lowercase gets no such filter, because then there is no signal to read.
+        """
+        if not text:
+            return []
+        lowered = text.lower()
+        permissive = lowered == text
+        positions: Dict[str, int] = {}
+        for name, node_id, pattern in self._names():
+            match = pattern.search(lowered)
+            if not match:
+                continue
+            if not permissive and not text[match.start()].isupper():
+                continue
+            current = positions.get(node_id)
+            positions[node_id] = match.start() if current is None else min(current, match.start())
+        return [nid for nid, _ in sorted(positions.items(), key=lambda kv: kv[1])]
+
+    def unindexed_entities(self, text: str) -> List[str]:
+        """
+        Names the question capitalises that match no node.
+
+        This is the difference between answering "which companies depend on Corning for glass" with
+        Micron and Coherent excerpts, and saying Corning has never been ingested. Word runs that
+        resolve through find_entities are dropped, as are interrogatives and section labels that
+        merely happen to start a sentence.
+        """
+        out: List[str] = []
+        for span in re.findall(r"[A-Z][a-z]+(?:[ -][A-Z][a-z]+){0,3}", text or ""):
+            name = span.strip(" -,.")
+            if len(name) < 4 or name.lower() in NAME_STOPWORDS or name in out:
+                continue
+            if self.resolve_node_id(name) or self.find_entities(name):
+                continue
+            out.append(name)
+        return out
 
     def get_component_id(self, name: str) -> Optional[str]:
         """Component nodes are no longer part of the graph, so this always returns None."""
@@ -650,15 +768,20 @@ class RelateSupplyChainGraph:
         return " ".join(cleaned.split())[:200]
 
     def hybrid_search_chunks(self, query_text: str, query_embedding: Optional[List[float]] = None,
-                             top_k: int = 5) -> List[Dict[str, Any]]:
+                             top_k: int = 5,
+                             tickers: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         """
         One statement: Relate's vector index and BM25 full-text index are fused with
         Reciprocal Rank Fusion, then each hit hops to the Company it describes.
 
+        `tickers` adds a third list: the named companies' own filings, ranked by the same cosine
+        scores. It is a boost rather than a filter, so a supplier's disclosure about its customer
+        still competes - it just stops winning by default.
+
         A chunk in both lists outranks a chunk leading one, which is what keeps an exact
         accession-number or product-name match from being buried by generic prose.
         Without an embedding the BM25 arm is used on its own instead of degrading to a
-        keyword count.
+        keyword count - and with no cosine to judge, no relevance gate is applied.
         """
         limit = max(1, min(int(top_k or 5), 10))
         params = {"q": self._fulltext_query(query_text), "k": limit, "rrf": RRF_K}
@@ -683,6 +806,11 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
 """
         else:
             params["v"] = [float(value) for value in query_embedding]
+            params["min_sim"] = MIN_VECTOR_SIM
+            # Both vector arms carry cosine, so one threshold covers them. Lexical agreement is not
+            # allowed to stand alone: "how do I reset my password" pulls Oracle excerpts at BM25 4.4
+            # that describe nothing relevant, and that is exactly the text a model will quote back.
+            scope = [t for t in (tickers or []) if t][:2]
             statement = """
 CALL () {
   MATCH (c:Chunk)
@@ -690,20 +818,37 @@ CALL () {
   WITH c, s ORDER BY s DESC, c.id
   WITH collect(c) AS cs, collect(s) AS ss
   UNWIND range(0, size(cs) - 1) AS i
-  RETURN cs[i] AS c, 'vector' AS list, i + 1 AS rank
+  RETURN cs[i] AS c, 'vector' AS list, i + 1 AS rank, ss[i] AS score
   UNION ALL
   MATCH (c:Chunk)
   SEARCH c IN (FULLTEXT INDEX chunk_text FOR $q LIMIT $k) SCORE AS s
   WITH c, s ORDER BY s DESC, c.id
   WITH collect(c) AS cs, collect(s) AS ss
   UNWIND range(0, size(cs) - 1) AS i
-  RETURN cs[i] AS c, 'fulltext' AS list, i + 1 AS rank
+  RETURN cs[i] AS c, 'fulltext' AS list, i + 1 AS rank, ss[i] AS score"""
+            if scope:
+                params["scope"] = scope
+                # Widening before filtering is what makes this a search of that company's filings
+                # rather than an intersection with five globally nearest chunks.
+                statement += """
+  UNION ALL
+  MATCH (c:Chunk)
+  SEARCH c IN (VECTOR INDEX chunk_emb FOR $v LIMIT $wide) SCORE AS s
+  WITH c, s WHERE c.ticker IN $scope
+  WITH c, s ORDER BY s DESC, c.id
+  WITH collect(c) AS cs, collect(s) AS ss
+  UNWIND range(0, size(cs) - 1) AS i
+  RETURN cs[i] AS c, 'scoped' AS list, i + 1 AS rank, ss[i] AS score"""
+                params["wide"] = min(200, max(60, limit * 20))
+            statement += """
 }
 WITH c, sum(1.0 / ($rrf + rank)) AS rrf, count(*) AS lists,
      min(CASE list WHEN 'vector' THEN rank END) AS v_rank,
-     min(CASE list WHEN 'fulltext' THEN rank END) AS f_rank
+     min(CASE list WHEN 'fulltext' THEN rank END) AS f_rank,
+     max(CASE WHEN list <> 'fulltext' THEN score END) AS v_score
+WHERE v_score IS NOT NULL AND v_score >= $min_sim
 OPTIONAL MATCH (c)-[:ABOUT]->(co:Company)
-WITH c, rrf, lists, v_rank, f_rank, collect(co.tier) AS tiers
+WITH c, rrf, lists, v_rank, f_rank, v_score, collect(co.tier) AS tiers
 // RRF scores tie constantly at small k, and an alphabetical tie-break would let an unrelated
 // semantic near-match outrank a chunk that literally contains the accession number being
 // asked for - so ties go to breadth, then to the lexical (full-text) hit.
@@ -711,7 +856,7 @@ ORDER BY rrf DESC, lists DESC, coalesce(f_rank, 999) ASC, coalesce(v_rank, 999) 
 LIMIT $k
 RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accession_no,
        c.form AS form, c.as_of AS as_of, c.heading AS heading,
-       rrf, lists, v_rank, f_rank, tiers
+       rrf, lists, v_rank, f_rank, round(v_score, 4) AS v_score, tiers
 """
         if not self.chunk_count():
             return []
@@ -1252,8 +1397,14 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
         Fused vector + BM25 retrieval over the Chunk nodes in Relate, then each hit's ticker
         is expanded with its graph neighbourhood. Everything comes from the database: there is
         no Python-side scan of an embedding list.
+
+        A company named in the question scopes the search, and a chunk below MIN_VECTOR_SIM is
+        dropped rather than passed on: an unrelated excerpt in the prompt is what makes a model
+        answer a question it has no evidence for.
         """
-        hits = self.hybrid_search_chunks(query_text, query_embedding, top_k=top_k)
+        entities = self.find_entities(query_text)
+        hits = self.hybrid_search_chunks(query_text, query_embedding, top_k=top_k,
+                                         tickers=entities[:2] or None)
         chunks = [
             {
                 "id": hit["id"],
@@ -1264,6 +1415,7 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
                 "as_of": hit.get("as_of"),
                 "heading": hit.get("heading"),
                 "rrf": round(float(hit.get("rrf") or 0.0), 5),
+                "similarity": hit.get("v_score"),
                 "in_vector": hit.get("v_rank"),
                 "in_fulltext": hit.get("f_rank"),
                 "tiers": [t for t in (hit.get("tiers") or []) if t is not None],
@@ -1277,11 +1429,14 @@ RETURN c.id AS id, c.text AS text, c.ticker AS ticker, c.accession_no AS accessi
             ticker = chunk.get("ticker")
             if ticker and ticker not in seen:
                 seen.append(ticker)
+        # Nothing cleared the gate. Fall back to the company the question actually named - the
+        # graph neighbourhood is still evidence - instead of the first node in the cache, which
+        # used to hand the model an arbitrary company's supply chain to describe.
         if not seen:
-            mentioned = [node_id for node_id in self._node_cache
-                         if node_id.lower() in (query_text or "").lower()]
-            seen = mentioned[:1] or list(self._node_cache)[:1]
+            seen = entities[:1]
         return {
             "chunks": chunks,
             "graph_contexts": [self.get_suppliers_and_customers(t) for t in seen],
+            "entities": entities,
+            "unknown_entities": self.unindexed_entities(query_text),
         }
