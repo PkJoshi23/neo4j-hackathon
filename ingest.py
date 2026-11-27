@@ -875,7 +875,10 @@ def _store_chunks(relate_graph: RelateSupplyChainGraph, ticker: str, document: D
         elif hasattr(embedder, "encode"):
             embeddings = embedder.encode(texts).tolist()
         else:
-            embeddings = [embedder.embed_query(text) for text in texts]
+            raise TypeError(
+                f"{type(embedder).__name__} exposes neither embed_documents() nor encode(), so "
+                "filing text cannot be embedded"
+            )
     except Exception as exc:
         logger.warning("Embedding failed for %s %s: %s", document["form"], document["accession_no"], exc)
         return 0
